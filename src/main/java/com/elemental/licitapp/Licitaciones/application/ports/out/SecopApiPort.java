@@ -5,5 +5,5 @@ import com.elemental.licitapp.Licitaciones.domain.entity.Licitacion;
 import java.util.List;
 
 public interface SecopApiPort {
-    List<Licitacion> obtenerProcesosActivos(int pageNumber, int pageSize);
+    List<Licitacion> obtenerLicitacionesPorModalidad(String modalidad, int pageNumber, int pageSize);
 }

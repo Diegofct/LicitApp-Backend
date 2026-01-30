@@ -20,9 +20,15 @@ public class LicitacionesController {
         this.licitacionesService = service;
     }
 
-    @GetMapping("/activos")
-    public ResponseEntity<List<Licitacion>> obtenerActivos(@RequestParam(defaultValue = "1") int page,
-                                                         @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(licitacionesService.obtenerProcesosActivos(page, size));
+    @GetMapping("/publicas")
+    public ResponseEntity<List<Licitacion>> obtenerLicitacionesPublicas(@RequestParam(defaultValue = "1") int page,
+                                                                        @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(licitacionesService.obtenerLicitacionesPublicas(page, size));
+    }
+
+    @GetMapping("/obra-publica")
+    public ResponseEntity<List<Licitacion>> obtenerLicitacionesObraPublica(@RequestParam(defaultValue = "1") int page,
+                                                                             @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(licitacionesService.obtenerLicitacionesObraPublica(page, size));
     }
 }
