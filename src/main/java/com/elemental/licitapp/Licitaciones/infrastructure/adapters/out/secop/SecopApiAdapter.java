@@ -38,7 +38,7 @@ public class SecopApiAdapter implements SecopApiPort {
     }
 
     @Override
-    public List<Licitacion> obtenerProcesosActivos(int pageNumber, int pageSize) {
+    public List<Licitacion> obtenerLicitacionesPorModalidad(String modalidad, int pageNumber, int pageSize) {
         int offset = (pageNumber - 1) * pageSize;
 
         // Usamos 'fecha_de_publicacion_del' que es el campo correcto para la fecha de publicación.
@@ -64,7 +64,8 @@ public class SecopApiAdapter implements SecopApiPort {
         String oneYearAgoFormatted = oneYearAgo.format(DateTimeFormatter.ISO_LOCAL_DATE);
 
         String whereClause = String.format(
-                "estado_del_procedimiento = 'Publicado' AND modalidad_de_contratacion = 'Licitación pública' AND tipo_de_contrato = 'Obra' AND %s >= '%sT00:00:00.000'",
+                "estado_del_procedimiento = 'Publicado' AND modalidad_de_contratacion = '%s' AND %s >= '%sT00:00:00.000'",
+                modalidad,
                 fechaField,
                 oneYearAgoFormatted
         );
