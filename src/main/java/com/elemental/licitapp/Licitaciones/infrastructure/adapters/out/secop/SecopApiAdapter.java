@@ -6,6 +6,9 @@ import com.elemental.licitapp.Licitaciones.infrastructure.adapters.out.secop.dto
 import com.elemental.licitapp.Licitaciones.infrastructure.adapters.out.secop.mapper.SecopLicitacionMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -16,6 +19,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.StringJoiner;
 
 @Component
@@ -38,10 +42,11 @@ public class SecopApiAdapter implements SecopApiPort {
     }
 
     @Override
-    public List<Licitacion> obtenerLicitacionesPorModalidad(String modalidad, int pageNumber, int pageSize) {
-        int offset = (pageNumber - 1) * pageSize;
+    public Page<Licitacion> obtenerLicitacionesPorModalidad(String modalidad, Pageable pageable) {
+        int pageNumber = pageable.getPageNumber();
+        int pageSize = pageable.getPageSize();
+        int offset = pageNumber * pageSize; // Pageable is 0-indexed for pageNumber
 
-        // Usamos 'fecha_de_publicacion_del' que es el campo correcto para la fecha de publicación.
         String fechaField = "fecha_de_publicacion_del";
 
         StringJoiner selectFields = new StringJoiner(",")
@@ -57,7 +62,6 @@ public class SecopApiAdapter implements SecopApiPort {
                 .add("urlproceso")
                 .add("codigo_principal_de_categoria")
                 .add("referencia_del_proceso")
-                // Mapeamos el campo de fecha a nuestro alias para el DTO.
                 .add(fechaField + " AS fecha_publicacion_consolidada");
 
         LocalDate oneYearAgo = LocalDate.now().minusYears(1);
@@ -70,7 +74,8 @@ public class SecopApiAdapter implements SecopApiPort {
                 oneYearAgoFormatted
         );
 
-        String uriQuery = UriComponentsBuilder.newInstance()
+        // 1. Get the paginated data
+        String dataUriQuery = UriComponentsBuilder.newInstance()
                 .queryParam("$select", selectFields.toString())
                 .queryParam("$where", whereClause)
                 .queryParam("$order", fechaField + " DESC")
@@ -79,29 +84,66 @@ public class SecopApiAdapter implements SecopApiPort {
                 .build()
                 .getQuery();
 
-        System.out.println("➡️ Llamando a SECOP con URI (v2 - GET): " + baseUrl + "?" + uriQuery);
+        System.out.println("➡️ Llamando a SECOP para datos (v2 - GET): " + baseUrl + "?" + dataUriQuery);
 
+        List<SecopLicitacionDTO> dtos = Collections.emptyList();
         try {
-            List<SecopLicitacionDTO> dtos = restClient.get()
-                    .uri("?" + uriQuery)
+            dtos = restClient.get()
+                    .uri("?" + dataUriQuery)
                     .retrieve()
-                    .body(new ParameterizedTypeReference<>() {});
+                    .body(new ParameterizedTypeReference<List<SecopLicitacionDTO>>() {});
 
             if (dtos == null) {
-                System.out.println("✅ SECOP no respondió con registros.");
-                return Collections.emptyList();
+                System.out.println("✅ SECOP no respondió con registros para datos.");
+                dtos = Collections.emptyList();
+            } else {
+                System.out.println("✅ SECOP respondió con " + dtos.size() + " registros.");
             }
 
-            System.out.println("✅ SECOP respondió con " + dtos.size() + " registros");
+        } catch (Exception e) {
+            System.err.println("Error al llamar a la API de SECOP para datos: " + e.getMessage());
+            e.printStackTrace();
+        }
 
-            return dtos.stream()
-                    .map(mapper::toEntity)
-                    .toList();
+        List<Licitacion> licitaciones = dtos.stream()
+                .map(mapper::toEntity)
+                .filter(licitacion -> licitacion.getFechaPublicacion() != null)
+                .filter(licitacion -> licitacion.getUrlSecop() != null && !licitacion.getUrlSecop().contains("STS/Users/Login"))
+                .toList();
+
+        // 2. Get the total count
+        long totalElements = 0;
+        String countUriQuery = UriComponentsBuilder.newInstance()
+                .queryParam("$select", "count(*)")
+                .queryParam("$where", whereClause)
+                .build()
+                .getQuery();
+
+        System.out.println("➡️ Llamando a SECOP para conteo total (v2 - GET): " + baseUrl + "?" + countUriQuery);
+
+        try {
+            // The Secop API for count returns a list of maps, e.g., [{"count":"1234"}]
+            List<Object> countResult = restClient.get()
+                    .uri("?" + countUriQuery)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<Object>>() {});
+
+            if (countResult != null && !countResult.isEmpty()) {
+                // Assuming the count is in the first element and is a map with a "count" key
+                if (countResult.get(0) instanceof java.util.Map) {
+                    java.util.Map<?, ?> countMap = (java.util.Map<?, ?>) countResult.get(0);
+                    if (countMap.containsKey("count")) {
+                        totalElements = Long.parseLong(Objects.toString(countMap.get("count")));
+                    }
+                }
+            }
+            System.out.println("✅ SECOP respondió con conteo total: " + totalElements);
 
         } catch (Exception e) {
-            System.err.println("Error al llamar a la API de SECOP: " + e.getMessage());
+            System.err.println("Error al llamar a la API de SECOP para conteo total: " + e.getMessage());
             e.printStackTrace();
-            return Collections.emptyList();
         }
+
+        return new PageImpl<>(licitaciones, pageable, totalElements);
     }
 }
