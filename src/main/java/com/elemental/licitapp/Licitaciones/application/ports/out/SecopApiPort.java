@@ -1,9 +1,9 @@
 package com.elemental.licitapp.Licitaciones.application.ports.out;
 
 import com.elemental.licitapp.Licitaciones.domain.entity.Licitacion;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface SecopApiPort {
-    List<Licitacion> obtenerLicitacionesPorModalidad(String modalidad, int pageNumber, int pageSize);
+    Page<Licitacion> obtenerLicitacionesPorModalidad(String modalidad, Pageable pageable);
 }

@@ -2,6 +2,9 @@ package com.elemental.licitapp.Licitaciones.application.service;
 
 import com.elemental.licitapp.Licitaciones.application.ports.out.SecopApiPort;
 import com.elemental.licitapp.Licitaciones.domain.entity.Licitacion;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,14 +19,16 @@ public class LicitacionesService {
         this.secopApiPort = secopApiPort;
     }
 
-    public List<Licitacion> obtenerLicitacionesPublicas(int pageNumber, int pageSize) {
-        List<Licitacion> licitaciones = secopApiPort.obtenerLicitacionesPorModalidad("Licitación pública", pageNumber, pageSize);
-        return filtrarYProcesarLicitaciones(licitaciones);
+    public Page<Licitacion> obtenerLicitacionesPublicas(Pageable pageable) {
+        Page<Licitacion> licitacionesPage = secopApiPort.obtenerLicitacionesPorModalidad("Licitación pública", pageable);
+        List<Licitacion> filteredLicitaciones = filtrarYProcesarLicitaciones(licitacionesPage.getContent());
+        return new PageImpl<>(filteredLicitaciones, pageable, licitacionesPage.getTotalElements());
     }
 
-    public List<Licitacion> obtenerLicitacionesObraPublica(int pageNumber, int pageSize) {
-        List<Licitacion> licitaciones = secopApiPort.obtenerLicitacionesPorModalidad("Licitación pública Obra Publica", pageNumber, pageSize);
-        return filtrarYProcesarLicitaciones(licitaciones);
+    public Page<Licitacion> obtenerLicitacionesObraPublica(Pageable pageable) {
+        Page<Licitacion> licitacionesPage = secopApiPort.obtenerLicitacionesPorModalidad("Licitación pública Obra Publica", pageable);
+        List<Licitacion> filteredLicitaciones = filtrarYProcesarLicitaciones(licitacionesPage.getContent());
+        return new PageImpl<>(filteredLicitaciones, pageable, licitacionesPage.getTotalElements());
     }
 
     private List<Licitacion> filtrarYProcesarLicitaciones(List<Licitacion> licitaciones) {
