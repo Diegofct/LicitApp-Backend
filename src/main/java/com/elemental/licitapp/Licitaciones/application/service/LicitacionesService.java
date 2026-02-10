@@ -20,21 +20,10 @@ public class LicitacionesService {
     }
 
     public Page<Licitacion> obtenerLicitacionesPublicas(Pageable pageable) {
-        Page<Licitacion> licitacionesPage = secopApiPort.obtenerLicitacionesPorModalidad("Licitación pública", pageable);
-        List<Licitacion> filteredLicitaciones = filtrarYProcesarLicitaciones(licitacionesPage.getContent());
-        return new PageImpl<>(filteredLicitaciones, pageable, licitacionesPage.getTotalElements());
+        return secopApiPort.obtenerLicitacionesPorModalidad("Licitación pública", pageable);
     }
 
     public Page<Licitacion> obtenerLicitacionesObraPublica(Pageable pageable) {
-        Page<Licitacion> licitacionesPage = secopApiPort.obtenerLicitacionesPorModalidad("Licitación pública Obra Publica", pageable);
-        List<Licitacion> filteredLicitaciones = filtrarYProcesarLicitaciones(licitacionesPage.getContent());
-        return new PageImpl<>(filteredLicitaciones, pageable, licitacionesPage.getTotalElements());
-    }
-
-    private List<Licitacion> filtrarYProcesarLicitaciones(List<Licitacion> licitaciones) {
-        return licitaciones.stream()
-                .filter(licitacion -> licitacion.getFechaPublicacion() != null)
-                .filter(licitacion -> licitacion.getUrlSecop() != null && !licitacion.getUrlSecop().contains("STS/Users/Login"))
-                .toList();
+        return secopApiPort.obtenerLicitacionesPorModalidad("Licitación pública Obra Publica", pageable);
     }
 }
