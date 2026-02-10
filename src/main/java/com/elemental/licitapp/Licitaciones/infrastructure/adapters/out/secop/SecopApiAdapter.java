@@ -1,5 +1,7 @@
 package com.elemental.licitapp.Licitaciones.infrastructure.adapters.out.secop;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.elemental.licitapp.Licitaciones.application.ports.out.SecopApiPort;
 import com.elemental.licitapp.Licitaciones.domain.entity.Licitacion;
 import com.elemental.licitapp.Licitaciones.infrastructure.adapters.out.secop.dto.SecopLicitacionDTO;
@@ -25,6 +27,8 @@ import java.util.StringJoiner;
 @Component
 public class SecopApiAdapter implements SecopApiPort {
 
+    private static final Logger log = LoggerFactory.getLogger(SecopApiAdapter.class);
+
     private final RestClient restClient;
     private final String baseUrl;
     private final SecopLicitacionMapper mapper;
@@ -45,7 +49,9 @@ public class SecopApiAdapter implements SecopApiPort {
     public Page<Licitacion> obtenerLicitacionesPorModalidad(String modalidad, Pageable pageable) {
         int pageNumber = pageable.getPageNumber();
         int pageSize = pageable.getPageSize();
+        log.debug("Pageable received: pageNumber={}, pageSize={}", pageNumber, pageSize);
         int offset = pageNumber * pageSize; // Pageable is 0-indexed for pageNumber
+        log.debug("Calculated offset for SECOP API: {}", offset);
 
         String fechaField = "fecha_de_publicacion_del";
 
@@ -84,7 +90,7 @@ public class SecopApiAdapter implements SecopApiPort {
                 .build()
                 .getQuery();
 
-        System.out.println("➡️ Llamando a SECOP para datos (v2 - GET): " + baseUrl + "?" + dataUriQuery);
+        log.info("➡️ Llamando a SECOP para datos (v2 - GET): {}{}", baseUrl, "?" + dataUriQuery);
 
         List<SecopLicitacionDTO> dtos = Collections.emptyList();
         try {
@@ -94,15 +100,14 @@ public class SecopApiAdapter implements SecopApiPort {
                     .body(new ParameterizedTypeReference<List<SecopLicitacionDTO>>() {});
 
             if (dtos == null) {
-                System.out.println("✅ SECOP no respondió con registros para datos.");
+                log.info("✅ SECOP no respondió con registros para datos.");
                 dtos = Collections.emptyList();
             } else {
-                System.out.println("✅ SECOP respondió con " + dtos.size() + " registros.");
+                log.info("✅ SECOP respondió con {} registros.", dtos.size());
             }
 
         } catch (Exception e) {
-            System.err.println("Error al llamar a la API de SECOP para datos: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error al llamar a la API de SECOP para datos: {}", e.getMessage(), e);
         }
 
         List<Licitacion> licitaciones = dtos.stream()
@@ -119,7 +124,7 @@ public class SecopApiAdapter implements SecopApiPort {
                 .build()
                 .getQuery();
 
-        System.out.println("➡️ Llamando a SECOP para conteo total (v2 - GET): " + baseUrl + "?" + countUriQuery);
+        log.info("➡️ Llamando a SECOP para conteo total (v2 - GET): {}{}", baseUrl, "?" + countUriQuery);
 
         try {
             // The Secop API for count returns a list of maps, e.g., [{"count":"1234"}]
@@ -137,11 +142,10 @@ public class SecopApiAdapter implements SecopApiPort {
                     }
                 }
             }
-            System.out.println("✅ SECOP respondió con conteo total: " + totalElements);
+            log.info("✅ SECOP respondió con conteo total: {}", totalElements);
 
         } catch (Exception e) {
-            System.err.println("Error al llamar a la API de SECOP para conteo total: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error al llamar a la API de SECOP para conteo total: {}", e.getMessage(), e);
         }
 
         return new PageImpl<>(licitaciones, pageable, totalElements);
