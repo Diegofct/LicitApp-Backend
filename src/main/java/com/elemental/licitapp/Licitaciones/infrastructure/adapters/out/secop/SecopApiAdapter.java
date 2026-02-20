@@ -50,7 +50,7 @@ public class SecopApiAdapter implements SecopApiPort {
         int pageNumber = pageable.getPageNumber();
         int pageSize = pageable.getPageSize();
         log.debug("Pageable received: pageNumber={}, pageSize={}", pageNumber, pageSize);
-        int offset = pageNumber * pageSize; // Pageable is 0-indexed for pageNumber
+        int offset = pageNumber * pageSize;
         log.debug("Calculated offset for SECOP API: {}", offset);
 
         String fechaField = "fecha_de_publicacion_del";
@@ -112,7 +112,7 @@ public class SecopApiAdapter implements SecopApiPort {
 
         List<Licitacion> licitaciones = dtos.stream()
                 .map(mapper::toEntity)
-                .filter(licitacion -> licitacion.getFechaPublicacion() != null)
+                //.filter(licitacion -> licitacion.getFechaPublicacion() != null)
                 .filter(licitacion -> licitacion.getUrlSecop() != null && !licitacion.getUrlSecop().contains("STS/Users/Login"))
                 .toList();
 
