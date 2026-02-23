@@ -45,7 +45,8 @@ public class CuadroDeObraController {
 
     @PatchMapping("/{id}/estado")
     public ResponseEntity<CuadroDeObra> updateEstado(@PathVariable Long id, @RequestBody Map<String, String> requestBody){
-        CuadroDeObraEstado nuevoEstado = CuadroDeObraEstado.valueOf(requestBody.get("estado"));
+        String estadoString = requestBody.get("cuadroDeObraEstado");
+        CuadroDeObraEstado nuevoEstado = CuadroDeObraEstado.valueOf(estadoString);
         return ResponseEntity.ok(cuadroDeObraService.updateEstado(id, nuevoEstado));
     }
 

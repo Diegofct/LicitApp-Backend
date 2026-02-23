@@ -25,7 +25,7 @@ public class CuadroDeObraService {
         List<CuadroDeObraEstado> estados;
 
         if("presentadas".equalsIgnoreCase(vista)){
-            estados = List.of(CuadroDeObraEstado.ADJUDICADO, CuadroDeObraEstado.NO_ADJUDICADO, CuadroDeObraEstado.CANCELADO);
+            estados = List.of(CuadroDeObraEstado.PRESENTADO, CuadroDeObraEstado.ADJUDICADO, CuadroDeObraEstado.NO_ADJUDICADO, CuadroDeObraEstado.CANCELADO);
         } else {
             estados = List.of(CuadroDeObraEstado.POR_PRESENTAR);
         }
