@@ -20,7 +20,7 @@ public class Licitacion {
     @Column(name = "id_del_proceso", unique = true, length = 50)
     private String idDelProceso;
 
-    @Column(name = "entidad", length = 100)
+    @Column(name = "entidad", length = 500)
     private String entidad;
 
     @Column(name = "objeto", columnDefinition = "TEXT")
