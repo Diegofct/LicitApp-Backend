@@ -18,13 +18,14 @@ public class CuadroDeObra {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "entidad_contratante")
+    @Column(name = "entidad_contratante", length = 500)
     private String entidadContratante;
 
     @Column(name = "num_proceso")
     private String numeroProceso;
 
-    @Column(name = "descripcion_objeto")
+    @Lob
+    @Column(name = "descripcion_objeto", columnDefinition = "TEXT")
     private String descripcionObjeto;
 
     @Column(name = "estado_proceso")
@@ -51,7 +52,8 @@ public class CuadroDeObra {
     @Column(name = "municipio")
     private String municipio;
 
-    @Column(name = "experiencia")
+    @Lob
+    @Column(name = "experiencia", columnDefinition = "TEXT")
     private String experiencia;
 
     @Column(name = "plazo")
@@ -60,7 +62,8 @@ public class CuadroDeObra {
     @Column(name = "anticipo")
     private String anticipo;
 
-    @Column(name = "observacion")
+    @Lob
+    @Column(name = "observacion", columnDefinition = "TEXT")
     private String observacion;
 
     @Enumerated(EnumType.STRING)

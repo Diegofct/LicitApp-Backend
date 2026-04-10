@@ -1,7 +1,9 @@
 package com.elemental.licitapp.CuadroDeObra.application.service;
 
 import com.elemental.licitapp.CuadroDeObra.application.ports.out.CuadroDeObraRepositoryPort;
+import com.elemental.licitapp.CuadroDeObra.application.ports.out.RequisitoLicitacionRepositoryPort;
 import com.elemental.licitapp.CuadroDeObra.domain.entity.CuadroDeObra;
+import com.elemental.licitapp.CuadroDeObra.domain.entity.RequisitoLicitacion;
 import com.elemental.licitapp.CuadroDeObra.domain.enums.CuadroDeObraEstado;
 import com.elemental.licitapp.Exception.ResourceNotFoundException;
 import org.springframework.data.domain.Page;
@@ -15,9 +17,22 @@ import java.util.List;
 public class CuadroDeObraService {
 
     private final CuadroDeObraRepositoryPort cuadroDeObraRepositoryPort;
+    private final RequisitoLicitacionRepositoryPort requisitoRepositoryPort;
 
-    public CuadroDeObraService(CuadroDeObraRepositoryPort cuadroDeObraRepositoryPort) {
+    public CuadroDeObraService(CuadroDeObraRepositoryPort cuadroDeObraRepositoryPort, RequisitoLicitacionRepositoryPort requisitoRepositoryPort) {
         this.cuadroDeObraRepositoryPort = cuadroDeObraRepositoryPort;
+        this.requisitoRepositoryPort = requisitoRepositoryPort;
+    }
+
+    public RequisitoLicitacion saveRequisito(Long cuadroId, RequisitoLicitacion requisito) {
+        CuadroDeObra cuadro = findCuadroById(cuadroId);
+        requisito.setCuadroDeObra(cuadro);
+        return requisitoRepositoryPort.save(requisito);
+    }
+
+    public RequisitoLicitacion getRequisitoByCuadroId(Long cuadroId) {
+        return requisitoRepositoryPort.findByCuadroDeObraId(cuadroId)
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontraron requisitos para este proceso"));
     }
 
     @Transactional(readOnly = true)

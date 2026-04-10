@@ -1,13 +1,17 @@
 package com.elemental.licitapp.CuadroDeObra.infrastructure.in.controller;
 
 import com.elemental.licitapp.CuadroDeObra.application.service.CuadroDeObraService;
+import com.elemental.licitapp.CuadroDeObra.application.service.RequisitoAIService;
+import com.elemental.licitapp.CuadroDeObra.domain.dto.RequisitoExtraidoDTO;
 import com.elemental.licitapp.CuadroDeObra.domain.entity.CuadroDeObra;
+import com.elemental.licitapp.CuadroDeObra.domain.entity.RequisitoLicitacion;
 import com.elemental.licitapp.CuadroDeObra.domain.enums.CuadroDeObraEstado;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
@@ -16,9 +20,29 @@ import java.util.Map;
 public class CuadroDeObraController {
 
     private final CuadroDeObraService cuadroDeObraService;
+    private final RequisitoAIService requisitoAIService;
 
-    public CuadroDeObraController(CuadroDeObraService cuadroDeObraService) {
+    public CuadroDeObraController(CuadroDeObraService cuadroDeObraService,
+                                 RequisitoAIService requisitoAIService) {
         this.cuadroDeObraService = cuadroDeObraService;
+        this.requisitoAIService = requisitoAIService;
+    }
+    @PostMapping("/{id}/extraer-requisitos")
+    public ResponseEntity<RequisitoExtraidoDTO> extraerRequisitos(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file) {
+        return ResponseEntity.ok(requisitoAIService.extraerRequisitosDePliego(id, file));
+    }
+
+    // Endpoints para Requisitos
+    @GetMapping("/{id}/requisitos")
+    public ResponseEntity<RequisitoLicitacion> getRequisitos(@PathVariable Long id) {
+        return ResponseEntity.ok(cuadroDeObraService.getRequisitoByCuadroId(id));
+    }
+
+    @PostMapping("/{id}/requisitos")
+    public ResponseEntity<RequisitoLicitacion> saveRequisitos(@PathVariable Long id, @RequestBody RequisitoLicitacion requisito) {
+        return new ResponseEntity<>(cuadroDeObraService.saveRequisito(id, requisito), HttpStatus.CREATED);
     }
 
     @GetMapping
