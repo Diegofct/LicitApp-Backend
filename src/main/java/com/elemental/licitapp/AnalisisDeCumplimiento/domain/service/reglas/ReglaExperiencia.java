@@ -42,25 +42,31 @@ public class ReglaExperiencia {
         int limiteBase = limiteContratosPliego > 0 ? limiteContratosPliego : 5;
         int limiteFinal = esMipymeOMujer ? limiteBase + 2 : limiteBase;
 
-        // Filtrar experiencias válidas y ordenarlas de mayor a menor valor en SMMLV
-        List<Experiencia> experienciasOrdenadas = experiencias.stream()
+        // Filtrar experiencias válidas y ordenarlas de mayor a menor valor prorrateado en SMMLV
+        List<BigDecimal> valoresProrrateados = experiencias.stream()
             .filter(e -> e.getValorSMMLV() != null && e.getValorSMMLV() > 0)
-            .sorted(Comparator.comparing(Experiencia::getValorSMMLV).reversed())
+            .map(e -> {
+                BigDecimal valorTotal = BigDecimal.valueOf(e.getValorSMMLV());
+                BigDecimal participacion = e.getPorcentajeParticipacion() != null 
+                    ? BigDecimal.valueOf(e.getPorcentajeParticipacion()).divide(BigDecimal.valueOf(100))
+                    : BigDecimal.ONE; // Si no hay porcentaje, se asume el 100%
+                return valorTotal.multiply(participacion);
+            })
+            .sorted(Comparator.reverseOrder())
             .toList();
 
         // Tomar hasta el límite permitido
-        List<Experiencia> mejoresContratos = experienciasOrdenadas.stream()
+        List<BigDecimal> mejoresValores = valoresProrrateados.stream()
             .limit(limiteFinal)
             .toList();
 
         // Sumar el valor en SMMLV de los contratos seleccionados
-        BigDecimal sumaSmmlv = mejoresContratos.stream()
-            .map(e -> BigDecimal.valueOf(e.getValorSMMLV()))
+        BigDecimal sumaSmmlv = mejoresValores.stream()
             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // Verificar si cumple
         boolean cumple = requeridoSmmlv == null || sumaSmmlv.compareTo(requeridoSmmlv) >= 0;
 
-        return new ResultadoExperiencia(sumaSmmlv, mejoresContratos.size(), cumple);
+        return new ResultadoExperiencia(sumaSmmlv, mejoresValores.size(), cumple);
     }
 }

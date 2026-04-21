@@ -22,7 +22,7 @@ public class RequisitoExtraidoDTO {
     private Integer contrato;     
 
     // --- FINANCIEROS ---
-    private Double ctProceso;     
+    private Double capitalTrabajo;     
     private Integer n;            
     private Double patrimonio;    
     

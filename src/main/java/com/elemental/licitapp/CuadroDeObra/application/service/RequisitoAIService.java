@@ -150,8 +150,8 @@ public class RequisitoAIService {
                                 {contexto}
                                 -------------------
                                 
-                                INSTRUCCIONES:
-                                - ctProceso: Valor del Capital de Trabajo.
+                                INSTRUCTIONS:
+                                - capitalTrabajo: Valor del Capital de Trabajo.
                                 - patrimonio: Valor del Patrimonio mínimo.
                                 - n: Número de meses/años de vigencia solicitados.
                                 - contrato: Máximo de contratos para experiencia.
@@ -194,7 +194,7 @@ public class RequisitoAIService {
         requisito.setEspecifica2(dto.getEspecifica2());
         requisito.setSecundaria(dto.getSecundaria());
         requisito.setContrato(dto.getContrato());
-        requisito.setCtProceso(dto.getCtProceso());
+        requisito.setCapitalTrabajo(dto.getCapitalTrabajo());
         requisito.setN(dto.getN() != null ? dto.getN() : 0);
         requisito.setPatrimonio(dto.getPatrimonio());
         requisito.setLiquidez(dto.getLiquidez());

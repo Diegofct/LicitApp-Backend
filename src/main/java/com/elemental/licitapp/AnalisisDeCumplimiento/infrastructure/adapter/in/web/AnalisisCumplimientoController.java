@@ -3,14 +3,13 @@ package com.elemental.licitapp.AnalisisDeCumplimiento.infrastructure.adapter.in.
 import com.elemental.licitapp.AnalisisDeCumplimiento.domain.model.ResultadoEvaluacion;
 import com.elemental.licitapp.AnalisisDeCumplimiento.domain.model.TipoParticipacion;
 import com.elemental.licitapp.AnalisisDeCumplimiento.domain.port.in.EvaluarCumplimientoUseCase;
-import com.elemental.licitapp.AnalisisDeCumplimiento.infrastructure.adapter.in.web.dto.DetalleRequisitoDTO;
-import com.elemental.licitapp.AnalisisDeCumplimiento.infrastructure.adapter.in.web.dto.EvaluarCumplimientoRequestDTO;
-import com.elemental.licitapp.AnalisisDeCumplimiento.infrastructure.adapter.in.web.dto.EvaluarCumplimientoResponseDTO;
-import com.elemental.licitapp.AnalisisDeCumplimiento.infrastructure.adapter.in.web.dto.SugerenciaConsorcioDTO;
+import com.elemental.licitapp.AnalisisDeCumplimiento.domain.service.reglas.ReglaCapacidadResidual;
+import com.elemental.licitapp.AnalisisDeCumplimiento.infrastructure.adapter.in.web.dto.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
@@ -24,9 +23,6 @@ public class AnalisisCumplimientoController {
 
     /**
      * Endpoint para evaluar si una empresa cumple con los requisitos financieros y de experiencia de una licitación.
-     * 
-     * @param requestDTO Contiene el ID de la empresa base y el ID del cuadro de obra (licitación)
-     * @return Resultado detallado del análisis con semáforo de cumplimiento.
      */
     @PostMapping("/evaluar")
     public ResponseEntity<EvaluarCumplimientoResponseDTO> evaluar(
@@ -64,5 +60,56 @@ public class AnalisisCumplimientoController {
         );
 
         return ResponseEntity.ok(responseDTO);
+    }
+
+    /**
+     * Endpoint para simular el cálculo de la Capacidad Residual del Proponente (CRP).
+     * Ruta: /analisis/calcular-residual-proponente
+     */
+    @PostMapping("/calcular-residual-proponente")
+    public ResponseEntity<BigDecimal> calcularResidualProponente(
+            @RequestBody CalcularCapacidadResidualRequestDTO request) {
+
+        BigDecimal crp = ReglaCapacidadResidual.calcularCRP(
+            request.getCapacidadOrganizacion(),
+            request.getPuntajeExperiencia(),
+            request.getPuntajeTecnico(),
+            request.getPuntajeFinanciero(),
+            request.getSaldosContratosEjecucion()
+        );
+
+        return ResponseEntity.ok(crp);
+    }
+
+    /**
+     * Endpoint para calcular la Capacidad Residual del Proceso (CRPC).
+     * Ruta: /analisis/calcular-residual-proceso-contratacion
+     */
+    @PostMapping("/calcular-residual-proceso-contratacion")
+    public ResponseEntity<BigDecimal> calcularResidualProceso(
+            @RequestBody CalcularCapacidadProcesoRequestDTO request) {
+
+        BigDecimal crpc = ReglaCapacidadResidual.calcularCRPC(
+            request.getPresupuestoOficial(), 
+            request.getAnticipo()
+        );
+
+        return ResponseEntity.ok(crpc);
+    }
+
+    /**
+     * Endpoint para calcular el Capital de Trabajo Demandado (CTd).
+     * Ruta: /analisis/calcular-capital-trabajo-demandado
+     */
+    @PostMapping("/calcular-capital-trabajo-demandado")
+    public ResponseEntity<BigDecimal> calcularCTd(
+            @RequestBody CalcularCTdRequestDTO request) {
+
+        BigDecimal ctd = ReglaCapacidadResidual.calcularCTd(
+            request.getPresupuestoOficial(), 
+            request.getAnticipo()
+        );
+
+        return ResponseEntity.ok(ctd);
     }
 }

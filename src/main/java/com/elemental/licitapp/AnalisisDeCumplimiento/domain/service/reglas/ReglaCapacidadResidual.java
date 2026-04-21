@@ -5,9 +5,14 @@ import java.math.RoundingMode;
 
 public class ReglaCapacidadResidual {
 
+    private static final BigDecimal CIEN = new BigDecimal("100");
+    private static final BigDecimal FACTOR_CTD_MENOR_12 = new  BigDecimal("0.33");
+    private static final int ESCALA_MONEDA = 2;
+    private static final int ESCALA_CALCULO = 4;
+
     /**
      * Calcula la Capacidad Residual del Proponente (CRP).
-     * CRP = CO * [(E + CT + CF) / 100] - SCE
+     * Formula = CRP = CO * [(E + CT + CF) / 100] - SCE
      * 
      * @param co Capacidad de Organización
      * @param e Experiencia (Score)
@@ -16,34 +21,40 @@ public class ReglaCapacidadResidual {
      * @param sce Saldos de Contratos en Ejecución
      */
     public static BigDecimal calcularCRP(BigDecimal co, BigDecimal e, BigDecimal ct, BigDecimal cf, BigDecimal sce) {
-        if (co == null) co = BigDecimal.ZERO;
-        if (e == null) e = BigDecimal.ZERO;
-        if (ct == null) ct = BigDecimal.ZERO;
-        if (cf == null) cf = BigDecimal.ZERO;
-        if (sce == null) sce = BigDecimal.ZERO;
+        BigDecimal sumaPuntajes = safeGet(e).add(safeGet(ct)).add(safeGet(cf));
 
-        BigDecimal sumaPuntajes = e.add(ct).add(cf);
-        BigDecimal factor = sumaPuntajes.divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP);
-        return co.multiply(factor).subtract(sce);
+        // Calculamos el factor con 4 decimales para precisión intermedia
+        BigDecimal factor = sumaPuntajes.divide(CIEN, ESCALA_CALCULO, RoundingMode.HALF_UP);
+
+        // Resultado final: CO * factor - SCE
+        return safeGet(co).multiply(factor)
+                .subtract(safeGet(sce))
+                .setScale(ESCALA_MONEDA, RoundingMode.HALF_UP);
     }
 
     /**
      * Calcula el Capital de Trabajo Demandado (CTd) para plazos < 12 meses.
      * CTd = (Presupuesto - Anticipo) * 33%
      */
-    public static BigDecimal calcularCTd(BigDecimal presupuesto, BigDecimal anticipo) {
-        if (presupuesto == null) presupuesto = BigDecimal.ZERO;
-        if (anticipo == null) anticipo = BigDecimal.ZERO;
-        return presupuesto.subtract(anticipo).multiply(new BigDecimal("0.33")).setScale(2, RoundingMode.HALF_UP);
+    public static BigDecimal calcularCTd(BigDecimal presupuesto, BigDecimal anticipo){
+        return safeGet(presupuesto).subtract(safeGet(anticipo))
+                .multiply(FACTOR_CTD_MENOR_12)
+                .setScale(ESCALA_MONEDA, RoundingMode.HALF_UP);
     }
 
     /**
      * Calcula la Capacidad Residual del Proceso (CRPC) para plazos <= 12 meses.
      * CRPC = Presupuesto - Anticipo
      */
-    public static BigDecimal calcularCRPC(BigDecimal presupuesto, BigDecimal anticipo) {
-        if (presupuesto == null) presupuesto = BigDecimal.ZERO;
-        if (anticipo == null) anticipo = BigDecimal.ZERO;
-        return presupuesto.subtract(anticipo);
+    public static BigDecimal calcularCRPC(BigDecimal presupuesto, BigDecimal anticipo){
+        return safeGet(presupuesto).subtract(safeGet(anticipo))
+                .setScale(ESCALA_MONEDA, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Asegura que los valores nulos se traten como cero para evitar NullPointerException.
+     */
+    private static BigDecimal safeGet(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 }
