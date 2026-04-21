@@ -1,6 +1,7 @@
 package com.elemental.licitapp.AnalisisDeCumplimiento.domain.service;
 
 import com.elemental.licitapp.AnalisisDeCumplimiento.domain.model.*;
+import com.elemental.licitapp.AnalisisDeCumplimiento.domain.service.reglas.ReglaCapacidadResidual;
 import com.elemental.licitapp.AnalisisDeCumplimiento.domain.service.reglas.ReglaExperiencia;
 import com.elemental.licitapp.AnalisisDeCumplimiento.domain.service.reglas.ReglaFinanciera;
 import com.elemental.licitapp.CuadroDeObra.domain.entity.RequisitoLicitacion;
@@ -47,8 +48,8 @@ public class AnalizadorCumplimientoService {
         }
 
         // 3. Capital de Trabajo (Activo Corriente - Pasivo Corriente)
-        if (requisito.getCtProceso() != null) {
-            BigDecimal req = BigDecimal.valueOf(requisito.getCtProceso());
+        if (requisito.getCapitalTrabajo() != null) {
+            BigDecimal req = BigDecimal.valueOf(requisito.getCapitalTrabajo());
             BigDecimal actual = ReglaFinanciera.calcularCapitalTrabajo(ind.getActivoCorriente(), ind.getPasivoCorriente());
             boolean cumple = actual.compareTo(req) >= 0;
             detalles.add(new DetalleRequisito("Capital de Trabajo", req, actual, cumple, 
@@ -119,6 +120,26 @@ public class AnalizadorCumplimientoService {
             ));
         }
 
+        // 9. Validación de Capacidad Residual (K)
+        if (requisito.getKResidualProceso() != null) {
+            BigDecimal reqK = BigDecimal.valueOf(requisito.getKResidualProceso());
+            BigDecimal crp = ReglaCapacidadResidual.calcularCRP(
+                empresa.getCapacidadOrganizacion(),
+                empresa.getPuntajeExperiencia(),
+                empresa.getPuntajeTecnico(),
+                empresa.getPuntajeFinanciero(),
+                empresa.getSaldosContratosEjecucion()
+            );
+            boolean cumple = crp.compareTo(reqK) >= 0;
+            detalles.add(new DetalleRequisito(
+                "Capacidad Residual (K)",
+                reqK,
+                crp,
+                cumple,
+                cumple ? "CUMPLE" : "NO CUMPLE: Déficit de " + reqK.subtract(crp)
+            ));
+        }
+
         boolean cumpleGlobal = detalles.stream().allMatch(DetalleRequisito::cumple);
 
         return new ResultadoEvaluacion(empresa.getId(), requisito.getCuadroDeObra().getId(), tipo, cumpleGlobal, detalles);
@@ -161,8 +182,8 @@ public class AnalizadorCumplimientoService {
         }
 
         // 3. Capital de Trabajo
-        if (requisito.getCtProceso() != null) {
-            BigDecimal req = BigDecimal.valueOf(requisito.getCtProceso());
+        if (requisito.getCapitalTrabajo() != null) {
+            BigDecimal req = BigDecimal.valueOf(requisito.getCapitalTrabajo());
             BigDecimal ctA = ReglaFinanciera.calcularCapitalTrabajo(indA.getActivoCorriente(), indA.getPasivoCorriente());
             BigDecimal ctB = ReglaFinanciera.calcularCapitalTrabajo(indB.getActivoCorriente(), indB.getPasivoCorriente());
             BigDecimal actual = ctA.multiply(participacion).add(ctB.multiply(participacion));
@@ -230,6 +251,34 @@ public class AnalizadorCumplimientoService {
             boolean cumple = totalExp.compareTo(reqExp) >= 0;
 
             detalles.add(new DetalleRequisito("Experiencia Acumulada (SMMLV)", reqExp, totalExp, cumple, cumple ? "CUMPLE" : "NO CUMPLE"));
+        }
+
+        // 9. Validación de Capacidad Residual (K)
+        if (requisito.getKResidualProceso() != null) {
+            BigDecimal reqK = BigDecimal.valueOf(requisito.getKResidualProceso());
+            BigDecimal crpA = ReglaCapacidadResidual.calcularCRP(
+                a.getCapacidadOrganizacion(),
+                a.getPuntajeExperiencia(),
+                a.getPuntajeTecnico(),
+                a.getPuntajeFinanciero(),
+                a.getSaldosContratosEjecucion()
+            );
+            BigDecimal crpB = ReglaCapacidadResidual.calcularCRP(
+                b.getCapacidadOrganizacion(),
+                b.getPuntajeExperiencia(),
+                b.getPuntajeTecnico(),
+                b.getPuntajeFinanciero(),
+                b.getSaldosContratosEjecucion()
+            );
+            BigDecimal totalCRP = crpA.add(crpB);
+            boolean cumple = totalCRP.compareTo(reqK) >= 0;
+            detalles.add(new DetalleRequisito(
+                "Capacidad Residual (K)",
+                reqK,
+                totalCRP,
+                cumple,
+                cumple ? "CUMPLE" : "NO CUMPLE"
+            ));
         }
 
         boolean cumpleGlobal = detalles.stream().allMatch(DetalleRequisito::cumple);

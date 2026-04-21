@@ -1,5 +1,7 @@
 package com.elemental.licitapp.CuadroDeObra.domain.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,12 +14,14 @@ import lombok.Builder;
 @AllArgsConstructor
 @Builder
 @Table(name = "requisitos_licitacion")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class RequisitoLicitacion {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonIgnore
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cuadro_de_obra_id", nullable = false)
     private CuadroDeObra cuadroDeObra;
@@ -38,15 +42,18 @@ public class RequisitoLicitacion {
     @Column(name = "num_contrato")
     private Integer contrato; // Cantidad de contratos permitidos
 
-    // --- INDICADORES FINANCIEROS REQUERIDOS ---
-    @Column(name = "ct_proceso")
-    private Double ctProceso;  // Capital de Trabajo del Proceso
-
     @Column(name = "n_meses")
     private int n;
 
+    // --- INDICADORES FINANCIEROS REQUERIDOS ---
+    @Column(name = "presupuesto_licitacion")
+    private Double presupuesto; // Presupuesto oficial capturado en el modal
+
     @Column(name = "patrimonio_pliego")
     private Double patrimonio; // El "Patrimonio" que pide el pliego
+
+    @Column(name = "capital_trabajo_req")
+    private Double capitalTrabajo; // Capital de Trabajo mínimo requerido
 
     // Nuevos campos para comparación completa
     @Column(name = "liquidez_req")
