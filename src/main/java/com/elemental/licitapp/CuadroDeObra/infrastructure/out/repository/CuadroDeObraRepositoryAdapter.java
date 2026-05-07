@@ -3,7 +3,6 @@ package com.elemental.licitapp.CuadroDeObra.infrastructure.out.repository;
 import com.elemental.licitapp.CuadroDeObra.application.ports.out.CuadroDeObraRepositoryPort;
 import com.elemental.licitapp.CuadroDeObra.domain.entity.CuadroDeObra;
 import com.elemental.licitapp.CuadroDeObra.domain.enums.CuadroDeObraEstado;
-import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
@@ -28,11 +27,6 @@ public class CuadroDeObraRepositoryAdapter implements CuadroDeObraRepositoryPort
     @Override
     public Optional<CuadroDeObra> findById(Long id) {
         return jpaRepository.findById(id);
-    }
-
-    @Override
-    public List<CuadroDeObra> findAll() {
-        return List.of();
     }
 
     @Override

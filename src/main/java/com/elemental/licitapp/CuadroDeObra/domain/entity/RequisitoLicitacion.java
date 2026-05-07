@@ -1,27 +1,21 @@
 package com.elemental.licitapp.CuadroDeObra.domain.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 
 @Entity
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 @Table(name = "requisitos_licitacion")
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class RequisitoLicitacion {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @JsonIgnore
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cuadro_de_obra_id", nullable = false)
     private CuadroDeObra cuadroDeObra;
@@ -43,7 +37,7 @@ public class RequisitoLicitacion {
     private Integer contrato; // Cantidad de contratos permitidos
 
     @Column(name = "n_meses")
-    private int n;
+    private Integer n;
 
     // --- INDICADORES FINANCIEROS REQUERIDOS ---
     @Column(name = "presupuesto_licitacion")

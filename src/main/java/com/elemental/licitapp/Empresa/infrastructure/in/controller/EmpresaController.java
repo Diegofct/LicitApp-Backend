@@ -1,10 +1,17 @@
 package com.elemental.licitapp.Empresa.infrastructure.in.controller;
 
-import com.elemental.licitapp.AnalisisDeCumplimiento.domain.service.reglas.ReglaFinanciera;
 import com.elemental.licitapp.Empresa.application.ports.in.EmpresaUseCase;
+import com.elemental.licitapp.Empresa.domain.entity.CapacidadResidualProponente;
 import com.elemental.licitapp.Empresa.domain.entity.Empresa;
+import com.elemental.licitapp.Empresa.domain.entity.IndicadoresFinancieros;
+import com.elemental.licitapp.Empresa.infrastructure.in.controller.dto.CapacidadResidualCalculadaDTO;
+import com.elemental.licitapp.Empresa.infrastructure.in.controller.dto.CapacidadResidualProponenteRequestDTO;
+import com.elemental.licitapp.Empresa.infrastructure.in.controller.dto.EmpresaRequestDTO;
+import com.elemental.licitapp.Empresa.infrastructure.in.controller.dto.EmpresaResponseDTO;
 import com.elemental.licitapp.Empresa.infrastructure.in.controller.dto.IndicadoresCalculadosDTO;
-import com.elemental.licitapp.Empresa.infrastructure.in.controller.dto.IndicadoresRawDTO;
+import com.elemental.licitapp.Empresa.infrastructure.in.controller.dto.IndicadoresFinancierosRequestDTO;
+import com.elemental.licitapp.Empresa.infrastructure.in.controller.mapper.EmpresaRequestMapper;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,54 +27,83 @@ public class EmpresaController {
         this.empresaUseCase = empresaUseCase;
     }
 
+    /**
+     * Calcula indicadores derivados sin persistir (usado por el formulario de Angular
+     * para mostrar liquidez/endeudamiento/etc. en vivo).
+     */
     @PostMapping("/calcular-indicadores")
-    public ResponseEntity<IndicadoresCalculadosDTO> calcularIndicadores(@RequestBody IndicadoresRawDTO rawDTO) {
-        var liquidez = ReglaFinanciera.calcularLiquidez(rawDTO.getActivoCorriente(), rawDTO.getPasivoCorriente());
-        var endeudamiento = ReglaFinanciera.calcularEndeudamiento(rawDTO.getPasivoTotal(), rawDTO.getActivoTotal());
-        var rci = ReglaFinanciera.calcularRCI(rawDTO.getUtilidadOperacional(), rawDTO.getGastosInteres());
-        var roe = ReglaFinanciera.calcularROE(rawDTO.getUtilidadOperacional(), rawDTO.getPatrimonio());
-        var roa = ReglaFinanciera.calcularROA(rawDTO.getUtilidadOperacional(), rawDTO.getActivoTotal());
-        var capitalTrabajo = ReglaFinanciera.calcularCapitalTrabajo(rawDTO.getActivoCorriente(), rawDTO.getPasivoCorriente());
+    public ResponseEntity<IndicadoresCalculadosDTO> calcularIndicadores(
+            @Valid @RequestBody IndicadoresFinancierosRequestDTO request) {
+        IndicadoresFinancieros ind = EmpresaRequestMapper.toEntity(request);
+        ind.recalcular();
 
-        var calculados = IndicadoresCalculadosDTO.builder()
-                .liquidez(liquidez)
-                .endeudamiento(endeudamiento)
-                .razonCoberturaInteres(rci)
-                .rentabilidadPatrimonio(roe)
-                .rentabilidadActivo(roa)
-                .capitalTrabajo(capitalTrabajo)
-                .build();
+        return ResponseEntity.ok(IndicadoresCalculadosDTO.builder()
+                .liquidez(ind.getLiquidez())
+                .endeudamiento(ind.getEndeudamiento())
+                .razonCoberturaInteres(ind.getRazonCoberturaInteres())
+                .rentabilidadPatrimonio(ind.getRentabilidadPatrimonio())
+                .rentabilidadActivo(ind.getRentabilidadActivo())
+                .capitalTrabajo(ind.getCapitalTrabajo())
+                .build());
+    }
 
-        return ResponseEntity.ok(calculados);
+    /**
+     * Calcula el resultadoK (CRP del proponente) sin persistir. Permite al
+     * formulario de Angular mostrar el valor en vivo, incluso en modo creación
+     * cuando aún no existe empresaId.
+     */
+    @PostMapping("/calcular-capacidad-residual")
+    public ResponseEntity<CapacidadResidualCalculadaDTO> calcularCapacidadResidual(
+            @Valid @RequestBody CapacidadResidualProponenteRequestDTO dto) {
+        CapacidadResidualProponente capacidad = EmpresaRequestMapper.toEntity(dto);
+        capacidad.recalcular();
+        return ResponseEntity.ok(CapacidadResidualCalculadaDTO.builder()
+                .resultadoCapacidadResidualProponente(capacidad.getResultadoK())
+                .build());
+    }
+
+    @PostMapping("/{id}/capacidad-residual")
+    public ResponseEntity<EmpresaResponseDTO> guardarCapacidadResidual(
+            @PathVariable Long id,
+            @Valid @RequestBody CapacidadResidualProponenteRequestDTO dto) {
+        CapacidadResidualProponente capacidad = EmpresaRequestMapper.toEntity(dto);
+        Empresa empresa = empresaUseCase.guardarCapacidadResidual(id, capacidad);
+        return ResponseEntity.ok(EmpresaRequestMapper.toResponse(empresa));
     }
 
     @PostMapping
-    public ResponseEntity<Empresa> crearEmpresa(@RequestBody Empresa empresa) {
-        return ResponseEntity.ok(empresaUseCase.crearEmpresa(empresa));
+    public ResponseEntity<EmpresaResponseDTO> crearEmpresa(@Valid @RequestBody EmpresaRequestDTO empresaDTO) {
+        Empresa empresa = EmpresaRequestMapper.toEntity(empresaDTO);
+        return ResponseEntity.ok(EmpresaRequestMapper.toResponse(empresaUseCase.crearEmpresa(empresa)));
     }
 
     @GetMapping
-    public ResponseEntity<List<Empresa>> listarEmpresas() {
-        return ResponseEntity.ok(empresaUseCase.obtenerTodas());
+    public ResponseEntity<List<EmpresaResponseDTO>> listarEmpresas() {
+        List<EmpresaResponseDTO> respuesta = empresaUseCase.obtenerTodas().stream()
+                .map(EmpresaRequestMapper::toResponse)
+                .toList();
+        return ResponseEntity.ok(respuesta);
     }
 
     @GetMapping("/{nit}")
-    public ResponseEntity<Empresa> obtenerPorNit(@PathVariable String nit) {
+    public ResponseEntity<EmpresaResponseDTO> obtenerPorNit(@PathVariable String nit) {
         return empresaUseCase.obtenerPorNit(nit)
+                .map(EmpresaRequestMapper::toResponse)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Empresa> actualizarEmpresa(@PathVariable Long id, @RequestBody Empresa empresa) {
-        return ResponseEntity.ok(empresaUseCase.actualizarEmpresa(id, empresa));
+    public ResponseEntity<EmpresaResponseDTO> actualizarEmpresa(
+            @PathVariable Long id,
+            @Valid @RequestBody EmpresaRequestDTO empresaDTO) {
+        Empresa empresa = EmpresaRequestMapper.toEntity(empresaDTO);
+        return ResponseEntity.ok(EmpresaRequestMapper.toResponse(empresaUseCase.actualizarEmpresa(id, empresa)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Empresa> eliminarEmpresa(@PathVariable Long id) {
+    public ResponseEntity<Void> eliminarEmpresa(@PathVariable Long id) {
         empresaUseCase.eliminarEmpresa(id);
-        return ResponseEntity.notFound().build();
+        return ResponseEntity.noContent().build();
     }
-
-
 }
