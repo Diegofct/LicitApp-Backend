@@ -1,5 +1,6 @@
 package com.elemental.licitapp.CuadroDeObra.application.service;
 
+import com.elemental.licitapp.CuadroDeObra.application.ports.in.CuadroDeObraUseCase;
 import com.elemental.licitapp.CuadroDeObra.application.ports.out.CuadroDeObraRepositoryPort;
 import com.elemental.licitapp.CuadroDeObra.application.ports.out.RequisitoLicitacionRepositoryPort;
 import com.elemental.licitapp.CuadroDeObra.domain.entity.CuadroDeObra;
@@ -14,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
-public class CuadroDeObraService {
+public class CuadroDeObraService implements CuadroDeObraUseCase {
 
     private final CuadroDeObraRepositoryPort cuadroDeObraRepositoryPort;
     private final RequisitoLicitacionRepositoryPort requisitoRepositoryPort;
@@ -24,17 +25,21 @@ public class CuadroDeObraService {
         this.requisitoRepositoryPort = requisitoRepositoryPort;
     }
 
+    @Override
     public RequisitoLicitacion saveRequisito(Long cuadroId, RequisitoLicitacion requisito) {
         CuadroDeObra cuadro = findCuadroById(cuadroId);
         requisito.setCuadroDeObra(cuadro);
         return requisitoRepositoryPort.save(requisito);
     }
 
+    @Override
+    @Transactional(readOnly = true)
     public RequisitoLicitacion getRequisitoByCuadroId(Long cuadroId) {
         return requisitoRepositoryPort.findByCuadroDeObraId(cuadroId)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontraron requisitos para este proceso"));
     }
 
+    @Override
     @Transactional(readOnly = true)
     public Page<CuadroDeObra> findCuadrosPorVistas(String vista, Pageable pageable){
         List<CuadroDeObraEstado> estados;
@@ -47,22 +52,26 @@ public class CuadroDeObraService {
         return cuadroDeObraRepositoryPort.findByCuadroDeObraEstadoIn(estados, pageable);
     }
 
+    @Override
     @Transactional(readOnly = true)
     public CuadroDeObra findCuadroById(Long id) {
         return cuadroDeObraRepositoryPort.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cuadro de obra con id: " + id + "no encontrado"));
     }
 
+    @Override
     @Transactional
     public CuadroDeObra createCuadro (CuadroDeObra nuevoCuadro){
         nuevoCuadro.setCuadroDeObraEstado(CuadroDeObraEstado.POR_PRESENTAR);
         return cuadroDeObraRepositoryPort.save(nuevoCuadro);
     }
 
+    @Override
     @Transactional
     public CuadroDeObra updateCuadro(Long id, CuadroDeObra cuadroConActualizaciones){
         CuadroDeObra cuadroExistente = findCuadroById(id);
 
+        // fechaPublicacion es inmutable: una vez publicada por la entidad contratante en SECOP, no se modifica.
         cuadroExistente.setEntidadContratante(cuadroConActualizaciones.getEntidadContratante());
         cuadroExistente.setNumeroProceso(cuadroConActualizaciones.getNumeroProceso());
         cuadroExistente.setDescripcionObjeto(cuadroConActualizaciones.getDescripcionObjeto());
@@ -77,20 +86,35 @@ public class CuadroDeObraService {
         cuadroExistente.setPlazo(cuadroConActualizaciones.getPlazo());
         cuadroExistente.setAnticipo(cuadroConActualizaciones.getAnticipo());
         cuadroExistente.setObservacion(cuadroConActualizaciones.getObservacion());
-        cuadroExistente.setCuadroDeObraEstado(cuadroConActualizaciones.getCuadroDeObraEstado());
+        aplicarCambioDeEstado(cuadroExistente, cuadroConActualizaciones.getCuadroDeObraEstado());
 
         return cuadroDeObraRepositoryPort.save(cuadroExistente);
     }
 
+    @Override
     @Transactional
     public CuadroDeObra updateEstado(Long id, CuadroDeObraEstado nuevoEstado){
         CuadroDeObra cuadroExistente = findCuadroById(id);
-        cuadroExistente.setCuadroDeObraEstado(nuevoEstado);
+        aplicarCambioDeEstado(cuadroExistente, nuevoEstado);
         return cuadroDeObraRepositoryPort.save(cuadroExistente);
     }
 
+    private void aplicarCambioDeEstado(CuadroDeObra cuadro, CuadroDeObraEstado nuevoEstado) {
+        if (nuevoEstado == null || nuevoEstado == cuadro.getCuadroDeObraEstado()) {
+            return;
+        }
+        if (!cuadro.getCuadroDeObraEstado().puedeTransicionarA(nuevoEstado)) {
+            throw new IllegalArgumentException(
+                    "Transición de estado inválida: " + cuadro.getCuadroDeObraEstado() + " → " + nuevoEstado);
+        }
+        cuadro.setCuadroDeObraEstado(nuevoEstado);
+    }
+
+    @Override
+    @Transactional
     public void deleteCuadro(Long id){
         findCuadroById(id);
+        requisitoRepositoryPort.deleteByCuadroDeObraId(id);
         cuadroDeObraRepositoryPort.delete(id);
     }
 

@@ -1,6 +1,5 @@
 package com.elemental.licitapp.Empresa.domain.entity;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
@@ -46,27 +45,14 @@ public class Empresa {
     @Column(name = "fecha_ultima_renovacion")
     private java.time.LocalDate fechaUltimaRenovacion;
 
-    // --- CAMPOS RUP PARA CAPACIDAD RESIDUAL ---
-    @Column(name = "capacidad_organizacion")
-    private java.math.BigDecimal capacidadOrganizacion;
-
-    @Column(name = "puntaje_experiencia")
-    private java.math.BigDecimal puntajeExperiencia;
-
-    @Column(name = "puntaje_tecnico")
-    private java.math.BigDecimal puntajeTecnico;
-
-    @Column(name = "puntaje_financiero")
-    private java.math.BigDecimal puntajeFinanciero;
-
-    @Column(name = "saldos_contratos_ejecucion")
-    private java.math.BigDecimal saldosContratosEjecucion;
-
     @OneToOne(mappedBy = "empresa", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private IndicadoresFinancieros indicadores;
 
     @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    @JsonManagedReference
     private List<Experiencia> experiencias = new ArrayList<>();
+
+    @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<CapacidadResidualProponente> capacidadesResiduales = new ArrayList<>();
 }

@@ -11,4 +11,5 @@ public interface EmpresaUseCase {
     Optional<Empresa> obtenerPorId(Long id);
     void eliminarEmpresa(Long id);
     Empresa actualizarEmpresa(Long id, Empresa empresa);
+    Empresa guardarCapacidadResidual(Long empresaId, com.elemental.licitapp.Empresa.domain.entity.CapacidadResidualProponente capacidad);
 }

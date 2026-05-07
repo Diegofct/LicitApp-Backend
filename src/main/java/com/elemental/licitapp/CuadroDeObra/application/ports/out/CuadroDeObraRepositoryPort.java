@@ -12,7 +12,6 @@ public interface CuadroDeObraRepositoryPort {
 
     CuadroDeObra save(CuadroDeObra c);
     Optional<CuadroDeObra> findById(Long id);
-    List<CuadroDeObra> findAll();
     Page<CuadroDeObra> findByCuadroDeObraEstadoIn(List<CuadroDeObraEstado> estados, Pageable pageable);
     void delete(Long id);
 

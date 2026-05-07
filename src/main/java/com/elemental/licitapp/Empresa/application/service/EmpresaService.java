@@ -1,19 +1,20 @@
 package com.elemental.licitapp.Empresa.application.service;
 
-import com.elemental.licitapp.AnalisisDeCumplimiento.domain.service.reglas.ReglaFinanciera;
+import com.elemental.licitapp.Empresa.application.ports.in.ConsultarEmpresasUseCase;
 import com.elemental.licitapp.Empresa.application.ports.in.EmpresaUseCase;
 import com.elemental.licitapp.Empresa.application.ports.out.EmpresaRepositoryPort;
+import com.elemental.licitapp.Empresa.domain.entity.CapacidadResidualProponente;
 import com.elemental.licitapp.Empresa.domain.entity.Empresa;
-import com.elemental.licitapp.Empresa.domain.entity.IndicadoresFinancieros;
 import com.elemental.licitapp.Exception.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
 @Service
-public class EmpresaService implements EmpresaUseCase {
+public class EmpresaService implements EmpresaUseCase, ConsultarEmpresasUseCase {
 
     private final EmpresaRepositoryPort empresaRepositoryPort;
 
@@ -24,40 +25,21 @@ public class EmpresaService implements EmpresaUseCase {
     @Override
     @Transactional
     public Empresa crearEmpresa(Empresa empresa) {
-        // Aseguramos la relación bidireccional si vienen datos de indicadores o experiencia
         if (empresa.getIndicadores() != null) {
             empresa.getIndicadores().setEmpresa(empresa);
-            // Calculamos automáticamente los indicadores financieros base
-            this.recalcularIndicadores(empresa.getIndicadores());
+            empresa.getIndicadores().recalcular();
         }
         if (empresa.getExperiencias() != null) {
             empresa.getExperiencias().forEach(exp -> exp.setEmpresa(empresa));
         }
+        if (empresa.getCapacidadesResiduales() != null) {
+            empresa.getCapacidadesResiduales().removeIf(c -> !tieneAlgunComponente(c));
+            empresa.getCapacidadesResiduales().forEach(cap -> {
+                cap.setEmpresa(empresa);
+                cap.recalcular();
+            });
+        }
         return empresaRepositoryPort.guardar(empresa);
-    }
-
-    private void recalcularIndicadores(IndicadoresFinancieros ind) {
-        if (ind.getActivoCorriente() != null && ind.getPasivoCorriente() != null) {
-            ind.setLiquidez(ReglaFinanciera.calcularLiquidez(ind.getActivoCorriente(), ind.getPasivoCorriente()).doubleValue());
-            ind.setCapitalTrabajo(ReglaFinanciera.calcularCapitalTrabajo(ind.getActivoCorriente(), ind.getPasivoCorriente()));
-        }
-        
-        if (ind.getPasivoTotal() != null && ind.getActivoTotal() != null) {
-            ind.setEndeudamiento(ReglaFinanciera.calcularEndeudamiento(ind.getPasivoTotal(), ind.getActivoTotal()).doubleValue());
-            ind.setPatrimonio(ind.getActivoTotal().subtract(ind.getPasivoTotal()));
-        }
-
-        if (ind.getUtilidadOperacional() != null && ind.getGastosInteres() != null) {
-            ind.setRazonCoberturaInteres(ReglaFinanciera.calcularRCI(ind.getUtilidadOperacional(), ind.getGastosInteres()).doubleValue());
-        }
-
-        if (ind.getUtilidadOperacional() != null && ind.getPatrimonio() != null) {
-            ind.setRentabilidadPatrimonio(ReglaFinanciera.calcularROE(ind.getUtilidadOperacional(), ind.getPatrimonio()).doubleValue());
-        }
-
-        if (ind.getUtilidadOperacional() != null && ind.getActivoTotal() != null) {
-            ind.setRentabilidadActivo(ReglaFinanciera.calcularROA(ind.getUtilidadOperacional(), ind.getActivoTotal()).doubleValue());
-        }
     }
 
     @Override
@@ -83,74 +65,106 @@ public class EmpresaService implements EmpresaUseCase {
     @Override
     @Transactional
     public Empresa actualizarEmpresa(Long id, Empresa empresaActualizada) {
-        // Primero intentamos buscar por ID de base de datos
-        Optional<Empresa> empresaOpt = empresaRepositoryPort.buscarPorId(id);
-        
-        // Si no se encuentra por ID, intentamos buscar por NIT (en caso de que el frontend envíe el NIT como ID)
-        if (empresaOpt.isEmpty()) {
-            empresaOpt = empresaRepositoryPort.buscarPorNit(String.valueOf(id));
+        Empresa empresaExistente = empresaRepositoryPort.buscarPorId(id)
+                .or(() -> empresaRepositoryPort.buscarPorNit(String.valueOf(id)))
+                .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada con ID/NIT: " + id));
+
+        if (empresaActualizada.getNit() != null) {
+            empresaExistente.setNit(empresaActualizada.getNit());
+        }
+        if (empresaActualizada.getNumeroProponenteCcb() != null) {
+            empresaExistente.setNumeroProponenteCcb(empresaActualizada.getNumeroProponenteCcb());
+        }
+        if (empresaActualizada.getIdentificacionRepresentanteLegal() != null) {
+            empresaExistente.setIdentificacionRepresentanteLegal(empresaActualizada.getIdentificacionRepresentanteLegal());
+        }
+        if (empresaActualizada.getFechaInscripcion() != null) {
+            empresaExistente.setFechaInscripcion(empresaActualizada.getFechaInscripcion());
+        }
+        if (empresaActualizada.getFechaUltimaRenovacion() != null) {
+            empresaExistente.setFechaUltimaRenovacion(empresaActualizada.getFechaUltimaRenovacion());
         }
 
-        return empresaOpt.map(empresaExistente -> {
-                    // 1. Actualizar datos básicos de identificación (si vienen en la peticion)
-                    if (empresaActualizada.getNit() != null) {
-                        empresaExistente.setNit(empresaActualizada.getNit());
-                    }
-                    if (empresaActualizada.getNumeroProponenteCcb() != null) {
-                        empresaExistente.setNumeroProponenteCcb(empresaActualizada.getNumeroProponenteCcb());
-                    }
-                    if (empresaActualizada.getIdentificacionRepresentanteLegal() != null) {
-                        empresaExistente.setIdentificacionRepresentanteLegal(empresaActualizada.getIdentificacionRepresentanteLegal());
-                    }
-                    if (empresaActualizada.getFechaInscripcion() != null) {
-                        empresaExistente.setFechaInscripcion(empresaActualizada.getFechaInscripcion());
-                    }
-                    if (empresaActualizada.getFechaUltimaRenovacion() != null) {
-                        empresaExistente.setFechaUltimaRenovacion(empresaActualizada.getFechaUltimaRenovacion());
-                    }
+        empresaExistente.setRazonSocial(empresaActualizada.getRazonSocial());
+        empresaExistente.setDireccion(empresaActualizada.getDireccion());
+        empresaExistente.setTelefono(empresaActualizada.getTelefono());
+        empresaExistente.setCorreo(empresaActualizada.getCorreo());
+        empresaExistente.setTamanoEmpresa(empresaActualizada.getTamanoEmpresa());
+        empresaExistente.setRepresentanteLegal(empresaActualizada.getRepresentanteLegal());
 
-                    // 2. Actualizar datos de contacto y perfil
-                    empresaExistente.setRazonSocial(empresaActualizada.getRazonSocial());
-                    empresaExistente.setDireccion(empresaActualizada.getDireccion());
-                    empresaExistente.setTelefono(empresaActualizada.getTelefono());
-                    empresaExistente.setCorreo(empresaActualizada.getCorreo());
-                    empresaExistente.setTamanoEmpresa(empresaActualizada.getTamanoEmpresa());
-                    empresaExistente.setRepresentanteLegal(empresaActualizada.getRepresentanteLegal());
+        if (empresaActualizada.getIndicadores() != null) {
+            var indNuevos = empresaActualizada.getIndicadores();
+            var indExistentes = empresaExistente.getIndicadores();
 
-                    // 3. Gestionar Indicadores Financieros
-                    if (empresaActualizada.getIndicadores() != null) {
-                        var indNuevos = empresaActualizada.getIndicadores();
-                        var indExistentes = empresaExistente.getIndicadores();
+            if (indExistentes == null) {
+                indNuevos.setEmpresa(empresaExistente);
+                empresaExistente.setIndicadores(indNuevos);
+            } else {
+                indExistentes.setAnioCierre(indNuevos.getAnioCierre());
+                indExistentes.setActivoCorriente(indNuevos.getActivoCorriente());
+                indExistentes.setPasivoCorriente(indNuevos.getPasivoCorriente());
+                indExistentes.setActivoTotal(indNuevos.getActivoTotal());
+                indExistentes.setPasivoTotal(indNuevos.getPasivoTotal());
+                indExistentes.setUtilidadOperacional(indNuevos.getUtilidadOperacional());
+                indExistentes.setGastosInteres(indNuevos.getGastosInteres());
+            }
+            empresaExistente.getIndicadores().recalcular();
+        }
 
-                        if (indExistentes == null) {
-                            indNuevos.setEmpresa(empresaExistente);
-                            empresaExistente.setIndicadores(indNuevos);
-                        } else {
-                            indExistentes.setAnioCierre(indNuevos.getAnioCierre());
-                            indExistentes.setActivoCorriente(indNuevos.getActivoCorriente());
-                            indExistentes.setPasivoCorriente(indNuevos.getPasivoCorriente());
-                            indExistentes.setActivoTotal(indNuevos.getActivoTotal());
-                            indExistentes.setPasivoTotal(indNuevos.getPasivoTotal());
-                            indExistentes.setUtilidadOperacional(indNuevos.getUtilidadOperacional());
-                            indExistentes.setGastosInteres(indNuevos.getGastosInteres());
-                        }
-                        // Recalcular indicadores automáticamente basados en los nuevos valores absolutos
-                        this.recalcularIndicadores(empresaExistente.getIndicadores());
-                    }
+        if (empresaActualizada.getExperiencias() != null) {
+            empresaExistente.getExperiencias().clear();
+            empresaActualizada.getExperiencias().forEach(exp -> {
+                exp.setEmpresa(empresaExistente);
+                empresaExistente.getExperiencias().add(exp);
+            });
+        }
 
-                    // 4. Gestionar Experiencias (Actualización de la lista)
-                    if (empresaActualizada.getExperiencias() != null) {
-                        // Limpiamos las experiencias actuales y añadimos las nuevas para simplificar la sincronización
-                        // (En una app de producción esto debería ser más granular, pero para este caso asegura integridad)
-                        empresaExistente.getExperiencias().clear();
-                        empresaActualizada.getExperiencias().forEach(exp -> {
-                            exp.setEmpresa(empresaExistente);
-                            empresaExistente.getExperiencias().add(exp);
-                        });
-                    }
+        if (empresaActualizada.getCapacidadesResiduales() != null) {
+            empresaExistente.getCapacidadesResiduales().clear();
+            empresaActualizada.getCapacidadesResiduales().stream()
+                    .filter(EmpresaService::tieneAlgunComponente)
+                    .forEach(cap -> {
+                        cap.setEmpresa(empresaExistente);
+                        cap.recalcular();
+                        empresaExistente.getCapacidadesResiduales().add(cap);
+                    });
+        }
 
-                    return empresaRepositoryPort.guardar(empresaExistente);
-                })
-                .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada con ID o NIT: " + id));
+        return empresaRepositoryPort.guardar(empresaExistente);
+    }
+
+    @Override
+    @Transactional
+    public Empresa guardarCapacidadResidual(Long empresaId, CapacidadResidualProponente capacidad) {
+        if (!tieneAlgunComponente(capacidad)) {
+            throw new IllegalArgumentException(
+                    "No se puede guardar una capacidad residual con todos los componentes en cero");
+        }
+
+        Empresa empresa = empresaRepositoryPort.buscarPorId(empresaId)
+                .or(() -> empresaRepositoryPort.buscarPorNit(String.valueOf(empresaId)))
+                .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada con ID/NIT: " + empresaId));
+
+        capacidad.setEmpresa(empresa);
+        capacidad.recalcular();
+
+        if (capacidad.getId() != null) {
+            empresa.getCapacidadesResiduales().removeIf(c -> c.getId().equals(capacidad.getId()));
+        }
+        empresa.getCapacidadesResiduales().add(capacidad);
+
+        return empresaRepositoryPort.guardar(empresa);
+    }
+
+    private static boolean tieneAlgunComponente(CapacidadResidualProponente c) {
+        return esPositivo(c.getCapacidadOrganizacion())
+                || esPositivo(c.getExperiencia())
+                || esPositivo(c.getCapacidadTecnica())
+                || esPositivo(c.getCapacidadFinanciera())
+                || esPositivo(c.getSaldosContratosEjecucion());
+    }
+
+    private static boolean esPositivo(BigDecimal v) {
+        return v != null && v.compareTo(BigDecimal.ZERO) > 0;
     }
 }

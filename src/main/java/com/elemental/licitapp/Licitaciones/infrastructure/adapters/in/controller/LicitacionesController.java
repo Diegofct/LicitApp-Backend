@@ -4,6 +4,7 @@ import com.elemental.licitapp.Licitaciones.application.service.LicitacionesServi
 import com.elemental.licitapp.Licitaciones.domain.entity.Licitacion;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,19 +14,21 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/licitaciones")
 public class LicitacionesController {
 
+    private static final int MAX_PAGE_SIZE = 1000;
+
     private final LicitacionesService licitacionesService;
 
     public LicitacionesController(LicitacionesService service) {
         this.licitacionesService = service;
     }
 
-    @GetMapping("/publicas")
-    public ResponseEntity<Page<Licitacion>> obtenerLicitacionesPublicas(Pageable pageable) {
-        return ResponseEntity.ok(licitacionesService.obtenerLicitacionesPublicas(pageable));
-    }
-
     @GetMapping("/obra-publica")
-    public ResponseEntity<Page<Licitacion>> obtenerLicitacionesObraPublica(Pageable pageable) {
+    public ResponseEntity<Page<Licitacion>> obtenerLicitacionesObraPublica(
+            @PageableDefault(size = 10) Pageable pageable) {
+        if (pageable.getPageSize() > MAX_PAGE_SIZE) {
+            throw new IllegalArgumentException(
+                    "El tamaño de página no puede exceder " + MAX_PAGE_SIZE + " (límite de la API SECOP).");
+        }
         return ResponseEntity.ok(licitacionesService.obtenerLicitacionesObraPublica(pageable));
     }
 }

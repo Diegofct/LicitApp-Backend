@@ -2,22 +2,11 @@ package com.elemental.licitapp.Licitaciones.infrastructure.adapters.out.secop.ma
 
 import com.elemental.licitapp.Licitaciones.domain.entity.Licitacion;
 import com.elemental.licitapp.Licitaciones.infrastructure.adapters.out.secop.dto.SecopLicitacionDTO;
-import org.modelmapper.ModelMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.stereotype.Component;
-
-import java.time.LocalDateTime;
-import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Stream;
 
 @Component
 public class SecopLicitacionMapper {
-
-    private final ModelMapper modelMapper;
-
-    public SecopLicitacionMapper(ModelMapper modelMapper) {
-        this.modelMapper = modelMapper;
-    }
 
     public Licitacion toEntity(SecopLicitacionDTO dto) {
         if (dto == null) {
@@ -25,7 +14,6 @@ public class SecopLicitacionMapper {
         }
 
         Licitacion licitacion = new Licitacion();
-
         licitacion.setIdDelProceso(dto.getIdDelProceso());
         licitacion.setEntidad(dto.getEntidad());
         licitacion.setObjeto(dto.getObjeto());
@@ -35,21 +23,26 @@ public class SecopLicitacionMapper {
         licitacion.setEstado(dto.getEstado());
         licitacion.setCodigoUnpspc(dto.getCodigoUnpspc());
         licitacion.setFechaPublicacion(dto.getFechaPublicacionConsolidada());
-
-        String ubicacion = (dto.getDepartamentoEntidad() != null ? dto.getDepartamentoEntidad() : "") +
-                " - " +
-                (dto.getCiudadEntidad() != null ? dto.getCiudadEntidad() : "");
-        licitacion.setUbicacion(ubicacion);
-
-        // Custom mapping for urlSecop
-        if (dto.getUrlProceso() != null && dto.getUrlProceso().isContainerNode()) {
-            licitacion.setUrlSecop(dto.getUrlProceso().get("url").asText());
-        }
-
+        licitacion.setUbicacion(buildUbicacion(dto));
+        licitacion.setUrlSecop(extractUrl(dto.getUrlProceso()));
         return licitacion;
     }
 
-    public SecopLicitacionDTO toDTO(Licitacion entity) {
-        return modelMapper.map(entity, SecopLicitacionDTO.class);
+    private String buildUbicacion(SecopLicitacionDTO dto) {
+        String depto = dto.getDepartamentoEntidad() != null ? dto.getDepartamentoEntidad() : "";
+        String ciudad = dto.getCiudadEntidad() != null ? dto.getCiudadEntidad() : "";
+        return depto + " - " + ciudad;
+    }
+
+    // SECOP entrega urlproceso a veces como objeto {url, description} y otras como string plano.
+    private String extractUrl(JsonNode urlProceso) {
+        if (urlProceso == null || urlProceso.isNull()) {
+            return null;
+        }
+        if (urlProceso.isTextual()) {
+            return urlProceso.asText();
+        }
+        JsonNode urlField = urlProceso.get("url");
+        return urlField != null && !urlField.isNull() ? urlField.asText() : null;
     }
 }
