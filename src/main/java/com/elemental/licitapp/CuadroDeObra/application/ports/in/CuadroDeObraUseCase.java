@@ -16,5 +16,6 @@ public interface CuadroDeObraUseCase {
     Page<CuadroDeObra> findCuadrosPorVistas(String vista, Pageable pageable);
 
     RequisitoLicitacion saveRequisito(Long cuadroId, RequisitoLicitacion requisito);
+    RequisitoLicitacion actualizarRequisito(Long cuadroId, RequisitoLicitacion parche);
     RequisitoLicitacion getRequisitoByCuadroId(Long cuadroId);
 }
