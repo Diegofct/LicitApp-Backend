@@ -1,7 +1,10 @@
 package com.elemental.licitapp.CuadroDeObra.application.service;
 
+import com.elemental.licitapp.CuadroDeObra.application.ports.in.ConsultarRequisitosUseCase;
 import com.elemental.licitapp.CuadroDeObra.application.ports.in.CuadroDeObraUseCase;
 import com.elemental.licitapp.CuadroDeObra.application.ports.out.CuadroDeObraRepositoryPort;
+import com.elemental.licitapp.CuadroDeObra.application.ports.out.ExisteConformacionConsorcioPort;
+import com.elemental.licitapp.CuadroDeObra.application.ports.out.InicializarSeguimientoPort;
 import com.elemental.licitapp.CuadroDeObra.application.ports.out.RequisitoLicitacionRepositoryPort;
 import com.elemental.licitapp.CuadroDeObra.domain.entity.CuadroDeObra;
 import com.elemental.licitapp.CuadroDeObra.domain.entity.RequisitoLicitacion;
@@ -13,19 +16,28 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
-public class CuadroDeObraService implements CuadroDeObraUseCase {
+public class CuadroDeObraService implements CuadroDeObraUseCase, ConsultarRequisitosUseCase {
 
     private final CuadroDeObraRepositoryPort cuadroDeObraRepositoryPort;
     private final RequisitoLicitacionRepositoryPort requisitoRepositoryPort;
+    private final InicializarSeguimientoPort inicializarSeguimientoPort;
+    private final ExisteConformacionConsorcioPort existeConformacionConsorcioPort;
 
-    public CuadroDeObraService(CuadroDeObraRepositoryPort cuadroDeObraRepositoryPort, RequisitoLicitacionRepositoryPort requisitoRepositoryPort) {
+    public CuadroDeObraService(CuadroDeObraRepositoryPort cuadroDeObraRepositoryPort,
+                               RequisitoLicitacionRepositoryPort requisitoRepositoryPort,
+                               InicializarSeguimientoPort inicializarSeguimientoPort,
+                               ExisteConformacionConsorcioPort existeConformacionConsorcioPort) {
         this.cuadroDeObraRepositoryPort = cuadroDeObraRepositoryPort;
         this.requisitoRepositoryPort = requisitoRepositoryPort;
+        this.inicializarSeguimientoPort = inicializarSeguimientoPort;
+        this.existeConformacionConsorcioPort = existeConformacionConsorcioPort;
     }
 
     @Override
+    @Transactional
     public RequisitoLicitacion saveRequisito(Long cuadroId, RequisitoLicitacion requisito) {
         CuadroDeObra cuadro = findCuadroById(cuadroId);
         requisito.setCuadroDeObra(cuadro);
@@ -33,10 +45,26 @@ public class CuadroDeObraService implements CuadroDeObraUseCase {
     }
 
     @Override
+    @Transactional
+    public RequisitoLicitacion actualizarRequisito(Long cuadroId, RequisitoLicitacion parche) {
+        RequisitoLicitacion existente = requisitoRepositoryPort.findByCuadroDeObraId(cuadroId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No existe requisito para el cuadro de obra con id: " + cuadroId));
+        existente.aplicarPatch(parche);
+        return requisitoRepositoryPort.save(existente);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public RequisitoLicitacion getRequisitoByCuadroId(Long cuadroId) {
         return requisitoRepositoryPort.findByCuadroDeObraId(cuadroId)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontraron requisitos para este proceso"));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<RequisitoLicitacion> obtenerPorCuadroId(Long cuadroId) {
+        return requisitoRepositoryPort.findByCuadroDeObraId(cuadroId);
     }
 
     @Override
@@ -86,28 +114,49 @@ public class CuadroDeObraService implements CuadroDeObraUseCase {
         cuadroExistente.setPlazo(cuadroConActualizaciones.getPlazo());
         cuadroExistente.setAnticipo(cuadroConActualizaciones.getAnticipo());
         cuadroExistente.setObservacion(cuadroConActualizaciones.getObservacion());
-        aplicarCambioDeEstado(cuadroExistente, cuadroConActualizaciones.getCuadroDeObraEstado());
+        boolean transicionoAPresentado = aplicarCambioDeEstado(
+                cuadroExistente, cuadroConActualizaciones.getCuadroDeObraEstado());
 
-        return cuadroDeObraRepositoryPort.save(cuadroExistente);
+        CuadroDeObra guardado = cuadroDeObraRepositoryPort.save(cuadroExistente);
+        if (transicionoAPresentado) {
+            inicializarSeguimientoPort.inicializar(guardado.getId());
+        }
+        return guardado;
     }
 
     @Override
     @Transactional
     public CuadroDeObra updateEstado(Long id, CuadroDeObraEstado nuevoEstado){
         CuadroDeObra cuadroExistente = findCuadroById(id);
-        aplicarCambioDeEstado(cuadroExistente, nuevoEstado);
-        return cuadroDeObraRepositoryPort.save(cuadroExistente);
+        boolean transicionoAPresentado = aplicarCambioDeEstado(cuadroExistente, nuevoEstado);
+        CuadroDeObra guardado = cuadroDeObraRepositoryPort.save(cuadroExistente);
+        if (transicionoAPresentado) {
+            inicializarSeguimientoPort.inicializar(guardado.getId());
+        }
+        return guardado;
     }
 
-    private void aplicarCambioDeEstado(CuadroDeObra cuadro, CuadroDeObraEstado nuevoEstado) {
+    /**
+     * @return true si la transición resultó en CuadroDeObraEstado.PRESENTADO (caller
+     *         debe disparar la inicialización del seguimiento).
+     */
+    private boolean aplicarCambioDeEstado(CuadroDeObra cuadro, CuadroDeObraEstado nuevoEstado) {
         if (nuevoEstado == null || nuevoEstado == cuadro.getCuadroDeObraEstado()) {
-            return;
+            return false;
         }
         if (!cuadro.getCuadroDeObraEstado().puedeTransicionarA(nuevoEstado)) {
             throw new IllegalArgumentException(
                     "Transición de estado inválida: " + cuadro.getCuadroDeObraEstado() + " → " + nuevoEstado);
         }
+        if (nuevoEstado == CuadroDeObraEstado.PRESENTADO
+                && !existeConformacionConsorcioPort.existePara(cuadro.getId())) {
+            throw new IllegalArgumentException(
+                    "No se puede pasar el cuadro " + cuadro.getId() + " a PRESENTADO sin antes guardar "
+                            + "la conformación del proponente (POST /analisis/consorcios). Si se presentó "
+                            + "individualmente, registra una conformación tipo INDIVIDUAL al 100%.");
+        }
         cuadro.setCuadroDeObraEstado(nuevoEstado);
+        return nuevoEstado == CuadroDeObraEstado.PRESENTADO;
     }
 
     @Override

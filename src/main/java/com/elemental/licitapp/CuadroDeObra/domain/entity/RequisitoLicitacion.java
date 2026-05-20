@@ -71,4 +71,29 @@ public class RequisitoLicitacion {
 
     @Column(name = "poe_anticipo")
     private Double poeAnticipo; // El % de anticipo según el POE
+
+    /**
+     * Aplica un parche parcial: copia solo los campos no-null del origen.
+     * Soporta el caso "actualizar uno o varios campos" desde el frontend
+     * sin obligarlo a reenviar el recurso completo.
+     */
+    public void aplicarPatch(RequisitoLicitacion parche) {
+        if (parche == null) return;
+        if (parche.general != null) this.general = parche.general;
+        if (parche.especifica1 != null) this.especifica1 = parche.especifica1;
+        if (parche.especifica2 != null) this.especifica2 = parche.especifica2;
+        if (parche.secundaria != null) this.secundaria = parche.secundaria;
+        if (parche.contrato != null) this.contrato = parche.contrato;
+        if (parche.n != null) this.n = parche.n;
+        if (parche.presupuesto != null) this.presupuesto = parche.presupuesto;
+        if (parche.patrimonio != null) this.patrimonio = parche.patrimonio;
+        if (parche.capitalTrabajo != null) this.capitalTrabajo = parche.capitalTrabajo;
+        if (parche.liquidez != null) this.liquidez = parche.liquidez;
+        if (parche.endeudamiento != null) this.endeudamiento = parche.endeudamiento;
+        if (parche.razonCoberturaInteres != null) this.razonCoberturaInteres = parche.razonCoberturaInteres;
+        if (parche.rentabilidadPatrimonio != null) this.rentabilidadPatrimonio = parche.rentabilidadPatrimonio;
+        if (parche.rentabilidadActivo != null) this.rentabilidadActivo = parche.rentabilidadActivo;
+        if (parche.kResidualProceso != null) this.kResidualProceso = parche.kResidualProceso;
+        if (parche.poeAnticipo != null) this.poeAnticipo = parche.poeAnticipo;
+    }
 }

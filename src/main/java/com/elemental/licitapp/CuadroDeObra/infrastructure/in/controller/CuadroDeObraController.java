@@ -40,6 +40,14 @@ public class CuadroDeObraController {
         return new ResponseEntity<>(CuadroDeObraRequestMapper.toResponseDTO(guardado), HttpStatus.CREATED);
     }
 
+    @PatchMapping("/{id}/requisitos")
+    public ResponseEntity<RequisitoLicitacionResponseDTO> updateRequisitos(@PathVariable Long id,
+                                                                           @Valid @RequestBody RequisitoLicitacionRequestDTO requisitoDTO) {
+        RequisitoLicitacion parche = CuadroDeObraRequestMapper.toEntity(requisitoDTO);
+        RequisitoLicitacion actualizado = cuadroDeObraUseCase.actualizarRequisito(id, parche);
+        return ResponseEntity.ok(CuadroDeObraRequestMapper.toResponseDTO(actualizado));
+    }
+
     @GetMapping
     public ResponseEntity<Page<CuadroDeObraResponseDTO>> getCuadrosPorVista(@RequestParam(defaultValue = "por-presentar") String vista, Pageable pageable) {
         Page<CuadroDeObraResponseDTO> page = cuadroDeObraUseCase.findCuadrosPorVistas(vista, pageable)
