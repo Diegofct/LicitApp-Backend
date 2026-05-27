@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface CuadroDeObraRepositoryPort {
@@ -13,6 +14,7 @@ public interface CuadroDeObraRepositoryPort {
     CuadroDeObra save(CuadroDeObra c);
     Optional<CuadroDeObra> findById(Long id);
     Page<CuadroDeObra> findByCuadroDeObraEstadoIn(List<CuadroDeObraEstado> estados, Pageable pageable);
+    Map<CuadroDeObraEstado, Long> contarPorEstado();
     void delete(Long id);
 
 }

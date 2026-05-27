@@ -2,6 +2,7 @@ package com.elemental.licitapp.AnalisisDeCumplimiento.infrastructure.in.controll
 
 import com.elemental.licitapp.AnalisisDeCumplimiento.application.ports.in.CalcularCapacidadProcesoUseCase;
 import com.elemental.licitapp.AnalisisDeCumplimiento.application.ports.in.ConsultarConsorcioUseCase;
+import com.elemental.licitapp.AnalisisDeCumplimiento.application.ports.in.EvaluarConformacionUseCase;
 import com.elemental.licitapp.AnalisisDeCumplimiento.application.ports.in.EvaluarCumplimientoUseCase;
 import com.elemental.licitapp.AnalisisDeCumplimiento.application.ports.in.GuardarConformacionConsorcioUseCase;
 import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.ConformacionConsorcio;
@@ -31,22 +32,28 @@ import java.math.BigDecimal;
 public class AnalisisCumplimientoController {
 
     private final EvaluarCumplimientoUseCase evaluarCumplimientoUseCase;
+    private final EvaluarConformacionUseCase evaluarConformacionUseCase;
     private final CalcularCapacidadProcesoUseCase calcularCapacidadProcesoUseCase;
     private final GuardarConformacionConsorcioUseCase guardarConformacionUseCase;
     private final ConsultarConsorcioUseCase consultarConsorcioUseCase;
 
     public AnalisisCumplimientoController(EvaluarCumplimientoUseCase evaluarCumplimientoUseCase,
+                                          EvaluarConformacionUseCase evaluarConformacionUseCase,
                                           CalcularCapacidadProcesoUseCase calcularCapacidadProcesoUseCase,
                                           GuardarConformacionConsorcioUseCase guardarConformacionUseCase,
                                           ConsultarConsorcioUseCase consultarConsorcioUseCase) {
         this.evaluarCumplimientoUseCase = evaluarCumplimientoUseCase;
+        this.evaluarConformacionUseCase = evaluarConformacionUseCase;
         this.calcularCapacidadProcesoUseCase = calcularCapacidadProcesoUseCase;
         this.guardarConformacionUseCase = guardarConformacionUseCase;
         this.consultarConsorcioUseCase = consultarConsorcioUseCase;
     }
 
     /**
-     * Evalúa si una empresa cumple con los requisitos financieros y de experiencia de una licitación.
+     * Evalúa si una empresa cumple los requisitos del pliego (modo INDIVIDUAL).
+     * Si no cumple sola, sugiere consorcios viables simulando con cada otra
+     * empresa registrada usando porcentajeSimulacion (default 0.5) para la
+     * empresa solicitante y el complemento para la candidata.
      */
     @PostMapping("/evaluar")
     public ResponseEntity<EvaluarCumplimientoResponseDTO> evaluar(
@@ -55,9 +62,22 @@ public class AnalisisCumplimientoController {
         ResultadoEvaluacion resultado = evaluarCumplimientoUseCase.evaluar(
             request.getEmpresaId(),
             request.getCuadroDeObraId(),
-            TipoParticipacion.INDIVIDUAL
+            TipoParticipacion.INDIVIDUAL,
+            request.getPorcentajeSimulacion()
         );
 
+        return ResponseEntity.ok(AnalisisCumplimientoResponseMapper.toResponse(resultado));
+    }
+
+    /**
+     * Evalúa la ConformacionConsorcio ya registrada para el cuadro, aplicando
+     * los porcentajes reales pactados entre los integrantes (no la heurística
+     * 50/50 de la sugerencia).
+     */
+    @PostMapping("/conformaciones/{cuadroDeObraId}/evaluar")
+    public ResponseEntity<EvaluarCumplimientoResponseDTO> evaluarConformacion(
+            @PathVariable Long cuadroDeObraId) {
+        ResultadoEvaluacion resultado = evaluarConformacionUseCase.evaluarConformacion(cuadroDeObraId);
         return ResponseEntity.ok(AnalisisCumplimientoResponseMapper.toResponse(resultado));
     }
 

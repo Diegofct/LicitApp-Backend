@@ -1,5 +1,6 @@
 package com.elemental.licitapp.CuadroDeObra.application.service;
 
+import com.elemental.licitapp.CuadroDeObra.application.ports.in.ConsultarCuadrosUseCase;
 import com.elemental.licitapp.CuadroDeObra.application.ports.in.ConsultarRequisitosUseCase;
 import com.elemental.licitapp.CuadroDeObra.application.ports.in.CuadroDeObraUseCase;
 import com.elemental.licitapp.CuadroDeObra.application.ports.out.CuadroDeObraRepositoryPort;
@@ -16,10 +17,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
-public class CuadroDeObraService implements CuadroDeObraUseCase, ConsultarRequisitosUseCase {
+public class CuadroDeObraService implements CuadroDeObraUseCase, ConsultarRequisitosUseCase, ConsultarCuadrosUseCase {
 
     private final CuadroDeObraRepositoryPort cuadroDeObraRepositoryPort;
     private final RequisitoLicitacionRepositoryPort requisitoRepositoryPort;
@@ -65,6 +67,18 @@ public class CuadroDeObraService implements CuadroDeObraUseCase, ConsultarRequis
     @Transactional(readOnly = true)
     public Optional<RequisitoLicitacion> obtenerPorCuadroId(Long cuadroId) {
         return requisitoRepositoryPort.findByCuadroDeObraId(cuadroId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<CuadroDeObraEstado, Long> contarPorEstado() {
+        return cuadroDeObraRepositoryPort.contarPorEstado();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CuadroDeObra> listarPorEstados(List<CuadroDeObraEstado> estados, Pageable pageable) {
+        return cuadroDeObraRepositoryPort.findByCuadroDeObraEstadoIn(estados, pageable);
     }
 
     @Override

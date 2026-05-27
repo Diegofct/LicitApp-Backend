@@ -3,6 +3,7 @@ package com.elemental.licitapp.AnalisisDeCumplimiento.application.service;
 import com.elemental.licitapp.AnalisisDeCumplimiento.application.ports.in.EvaluarCumplimientoUseCase;
 import com.elemental.licitapp.AnalisisDeCumplimiento.application.ports.out.ObtenerEmpresasPort;
 import com.elemental.licitapp.AnalisisDeCumplimiento.application.ports.out.ObtenerRequisitosPort;
+import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.IntegranteEvaluacion;
 import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.ResultadoEvaluacion;
 import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.SugerenciaConsorcio;
 import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.TipoParticipacion;
@@ -11,11 +12,14 @@ import com.elemental.licitapp.Empresa.domain.entity.Empresa;
 import com.elemental.licitapp.Exception.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class EvaluarCumplimientoAppService implements EvaluarCumplimientoUseCase {
+
+    private static final BigDecimal PORCENTAJE_SIMULACION_DEFAULT = new BigDecimal("0.5");
 
     private final ObtenerEmpresasPort obtenerEmpresasPort;
     private final ObtenerRequisitosPort obtenerRequisitosPort;
@@ -30,7 +34,8 @@ public class EvaluarCumplimientoAppService implements EvaluarCumplimientoUseCase
     }
 
     @Override
-    public ResultadoEvaluacion evaluar(Long empresaId, Long cuadroId, TipoParticipacion tipo) {
+    public ResultadoEvaluacion evaluar(Long empresaId, Long cuadroId, TipoParticipacion tipo,
+                                       BigDecimal porcentajeSimulacion) {
         Empresa empresa = obtenerEmpresasPort.obtenerPorId(empresaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada con ID: " + empresaId));
 
@@ -43,6 +48,11 @@ public class EvaluarCumplimientoAppService implements EvaluarCumplimientoUseCase
             return resultadoIndividual;
         }
 
+        BigDecimal porcentajeSolicitante = porcentajeSimulacion != null
+                ? porcentajeSimulacion
+                : PORCENTAJE_SIMULACION_DEFAULT;
+        BigDecimal porcentajeCandidata = BigDecimal.ONE.subtract(porcentajeSolicitante);
+
         List<SugerenciaConsorcio> sugerencias = new ArrayList<>();
         List<Empresa> todasLasEmpresas = obtenerEmpresasPort.obtenerTodas();
 
@@ -51,7 +61,12 @@ public class EvaluarCumplimientoAppService implements EvaluarCumplimientoUseCase
                 continue;
             }
 
-            ResultadoEvaluacion resultadoConsorcio = analizadorService.evaluarConsorcio(empresa, otraEmpresa, requisito);
+            List<IntegranteEvaluacion> integrantes = List.of(
+                new IntegranteEvaluacion(empresa, porcentajeSolicitante),
+                new IntegranteEvaluacion(otraEmpresa, porcentajeCandidata)
+            );
+
+            ResultadoEvaluacion resultadoConsorcio = analizadorService.evaluarConsorcio(integrantes, requisito);
 
             if (resultadoConsorcio.cumpleGlobal()) {
                 sugerencias.add(new SugerenciaConsorcio(

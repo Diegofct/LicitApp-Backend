@@ -18,6 +18,7 @@ AnalisisDeCumplimiento/
 │   ├── ports/
 │   │   ├── in/
 │   │   │   ├── CalcularCapacidadProcesoUseCase.java
+│   │   │   ├── EvaluarConformacionUseCase.java
 │   │   │   └── EvaluarCumplimientoUseCase.java
 │   │   └── out/
 │   │       ├── ObtenerEmpresasPort.java
@@ -25,10 +26,12 @@ AnalisisDeCumplimiento/
 │   └── service/
 │       ├── AnalizadorCumplimientoService.java        @Service
 │       ├── CalcularCapacidadProcesoAppService.java   @Service
+│       ├── EvaluarConformacionAppService.java        @Service
 │       └── EvaluarCumplimientoAppService.java        @Service
 ├── domain/
 │   ├── entity/
 │   │   ├── DetalleRequisito.java                     (record)
+│   │   ├── IntegranteEvaluacion.java                 (record — empresa + fracción 0..1)
 │   │   ├── ResultadoEvaluacion.java                  (record)
 │   │   ├── SugerenciaConsorcio.java                  (record)
 │   │   └── TipoParticipacion.java                    (enum)
@@ -54,14 +57,17 @@ AnalisisDeCumplimiento/
 ## Endpoints REST (contrato preservado, sin cambios)
 
 1. `POST /analisis/evaluar`
-   - Request: `{ empresaId, cuadroDeObraId }`
+   - Request: `{ empresaId, cuadroDeObraId, porcentajeSimulacion? }` (`porcentajeSimulacion` ∈ [0.01, 0.99], default 0.5; controla la heurística de sugerencia de socios).
    - Response: `{ empresaId, cuadroDeObraId, tipoParticipacion, cumpleGlobal, detalles[], sugerencias[] }`
    - Pasa por `EvaluarCumplimientoUseCase`.
-2. `POST /analisis/calcular-residual-proceso-contratacion`
+2. `POST /analisis/conformaciones/{cuadroDeObraId}/evaluar`
+   - Evalúa la `ConformacionConsorcio` ya registrada para el cuadro aplicando los porcentajes reales pactados.
+   - Pasa por `EvaluarConformacionUseCase`.
+3. `POST /analisis/calcular-residual-proceso-contratacion`
    - Request: `{ presupuestoOficial, anticipo }`
    - Response: `BigDecimal` (cuerpo plano)
    - Pasa por `CalcularCapacidadProcesoUseCase.calcularCRPC`.
-3. `POST /analisis/calcular-capital-trabajo-demandado`
+4. `POST /analisis/calcular-capital-trabajo-demandado`
    - Request: idem.
    - Response: `BigDecimal` (cuerpo plano)
    - Pasa por `CalcularCapacidadProcesoUseCase.calcularCTd`.
@@ -85,17 +91,20 @@ Ya no se consume directamente el `RequisitoLicitacionJpaRepository` del módulo 
 8. Nuevo mapper estático `AnalisisCumplimientoResponseMapper` que extrae el mapeo `ResultadoEvaluacion → EvaluarCumplimientoResponseDTO` del controller.
 9. Nuevo `ConsultarRequisitosUseCase` en `CuadroDeObra/application/ports/in/`, espejo de `ConsultarEmpresasUseCase`.
 
-## Reglas de negocio implícitas (siguen vigentes, no se han modificado)
+## Reglas de negocio implícitas (vigentes)
 
 1. Mipyme/Mujer suma 2 al límite de contratos en `ReglaExperiencia` (`limite + 2` cuando `esMipymeOMujer`).
 2. Detección de Mipyme/Mujer por substring de `tamanoEmpresa` (busca "micro", "pequeña", "mediana", "mipyme", "mujer"). Frágil ante tildes/casing.
-3. Consorcio fijo al 50/50: `participacion = 0.5` en `AnalizadorCumplimientoService.evaluarConsorcio`. No se modela el porcentaje real.
-4. Capacidad residual del consorcio = suma simple de las K individuales (sin ponderación por participación).
-5. `obtenerUltimaK` toma el último elemento de la lista `capacidadesResiduales` asumiendo orden cronológico. Sin filtro por fecha.
-6. Si `kResidualProceso` viene `null` se omite la regla, no se considera incumplimiento.
-7. Si `valorSMMLV` del cuadro viene `null` o `0`, no se evalúa experiencia.
+3. `obtenerUltimaK` toma el último elemento (no nulo) de la lista `capacidadesResiduales`. Sin filtro explícito por fecha — asume orden cronológico de inserción.
+4. Si `kResidualProceso` viene `null` se omite la regla, no se considera incumplimiento.
+5. Si `valorSMMLV` del cuadro viene `null` o `0`, no se evalúa experiencia.
+6. Sugerencia de socios (`POST /analisis/evaluar`): heurística 50/50 por defecto, configurable vía `porcentajeSimulacion` del request. La evaluación itera sobre TODAS las empresas registradas (sin paginación ni filtro previo) — posible cuello de botella a futuro.
 
-Estas reglas son candidatas a refinar más adelante (no hacían parte del scope de la migración).
+### Reglas refinadas en working tree (2026-05-25, aún sin commit)
+
+- **Consorcio con porcentajes reales**: `AnalizadorCumplimientoService.evaluarConsorcio` ahora recibe `List<IntegranteEvaluacion>` (empresa + fracción). Ratios financieros → promedio ponderado; magnitudes (patrimonio, capital de trabajo, experiencia SMMLV, K residual) → suma ponderada. Antes era 50/50 fijo y suma simple de K.
+- Nuevo flujo `POST /analisis/conformaciones/{id}/evaluar` que toma la `ConformacionConsorcio` persistida y la evalúa con sus porcentajes pactados.
+- `EvaluarCumplimientoUseCase.evaluar(empresaId, cuadroId, tipo, porcentajeSimulacion)` cambió firma para exponer el porcentaje de simulación.
 
 ## Deuda técnica reconocida
 

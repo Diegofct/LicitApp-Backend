@@ -3,3 +3,5 @@
 - [AnalisisDeCumplimiento estado actual](analisis_cumplimiento_estado_actual.md) — inventario, endpoints REST, dependencias y reglas implícitas detectadas pre-migración
 - [Slice ConformacionConsorcio](conformacion_consorcio.md) — persistencia de individual/consorcio/UT por cuadro; endpoints, reglas y pendientes para iteraciones 2 y 3
 - [Módulo SeguimientoProceso](seguimiento_proceso.md) — ciclo de vida post-presentación, eventos manuales, auto-init al pasar a PRESENTADO
+- [Decisión Resultados solo lectura](decision_resultados_lectura_pura.md) — slice Resultados agrega sobre CuadroDeObra; motivo no-adjudicación va en `observacion`, no se agrega campo
+- [Módulo Resultados](modulo_resultados.md) — slice creado 2026-05-26; endpoints `/resultados/resumen` y `/resultados/historial`, tasa de éxito en porcentaje, sin tabla propia
