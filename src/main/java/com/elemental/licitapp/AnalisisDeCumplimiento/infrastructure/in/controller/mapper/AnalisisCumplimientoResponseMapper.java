@@ -1,11 +1,13 @@
 package com.elemental.licitapp.AnalisisDeCumplimiento.infrastructure.in.controller.mapper;
 
 import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.DetalleRequisito;
+import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.IntegrantePropuesto;
+import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.PropuestaConsorcio;
 import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.ResultadoEvaluacion;
-import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.SugerenciaConsorcio;
 import com.elemental.licitapp.AnalisisDeCumplimiento.infrastructure.in.controller.dto.DetalleRequisitoDTO;
 import com.elemental.licitapp.AnalisisDeCumplimiento.infrastructure.in.controller.dto.EvaluarCumplimientoResponseDTO;
-import com.elemental.licitapp.AnalisisDeCumplimiento.infrastructure.in.controller.dto.SugerenciaConsorcioDTO;
+import com.elemental.licitapp.AnalisisDeCumplimiento.infrastructure.in.controller.dto.IntegrantePropuestoDTO;
+import com.elemental.licitapp.AnalisisDeCumplimiento.infrastructure.in.controller.dto.PropuestaConsorcioDTO;
 
 import java.util.List;
 
@@ -31,10 +33,22 @@ public final class AnalisisCumplimientoResponseMapper {
             .toList();
     }
 
-    private static List<SugerenciaConsorcioDTO> toSugerenciasDTO(List<SugerenciaConsorcio> sugerencias) {
+    private static List<PropuestaConsorcioDTO> toSugerenciasDTO(List<PropuestaConsorcio> sugerencias) {
         if (sugerencias == null) return List.of();
         return sugerencias.stream()
-            .map(s -> new SugerenciaConsorcioDTO(s.empresaId(), s.nit(), s.razonSocial()))
+            .map(p -> new PropuestaConsorcioDTO(
+                toIntegrantesDTO(p.integrantes()),
+                p.cumpleGlobal(),
+                p.requisitosCubiertos(),
+                p.requisitosPendientes()))
+            .toList();
+    }
+
+    private static List<IntegrantePropuestoDTO> toIntegrantesDTO(List<IntegrantePropuesto> integrantes) {
+        if (integrantes == null) return List.of();
+        return integrantes.stream()
+            .map(i -> new IntegrantePropuestoDTO(
+                i.empresaId(), i.nit(), i.razonSocial(), i.porcentaje(), i.solicitante(), i.requisitosQueCubre()))
             .toList();
     }
 }

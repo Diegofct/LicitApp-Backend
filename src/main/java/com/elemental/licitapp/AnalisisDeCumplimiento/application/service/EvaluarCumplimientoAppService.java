@@ -3,17 +3,16 @@ package com.elemental.licitapp.AnalisisDeCumplimiento.application.service;
 import com.elemental.licitapp.AnalisisDeCumplimiento.application.ports.in.EvaluarCumplimientoUseCase;
 import com.elemental.licitapp.AnalisisDeCumplimiento.application.ports.out.ObtenerEmpresasPort;
 import com.elemental.licitapp.AnalisisDeCumplimiento.application.ports.out.ObtenerRequisitosPort;
-import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.IntegranteEvaluacion;
+import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.PropuestaConsorcio;
 import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.ResultadoEvaluacion;
-import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.SugerenciaConsorcio;
 import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.TipoParticipacion;
 import com.elemental.licitapp.CuadroDeObra.domain.entity.RequisitoLicitacion;
 import com.elemental.licitapp.Empresa.domain.entity.Empresa;
 import com.elemental.licitapp.Exception.ResourceNotFoundException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -24,13 +23,19 @@ public class EvaluarCumplimientoAppService implements EvaluarCumplimientoUseCase
     private final ObtenerEmpresasPort obtenerEmpresasPort;
     private final ObtenerRequisitosPort obtenerRequisitosPort;
     private final AnalizadorCumplimientoService analizadorService;
+    private final BuscadorConsorcioService buscadorConsorcioService;
+    private final int maxPropuestas;
 
     public EvaluarCumplimientoAppService(ObtenerEmpresasPort obtenerEmpresasPort,
                                          ObtenerRequisitosPort obtenerRequisitosPort,
-                                         AnalizadorCumplimientoService analizadorService) {
+                                         AnalizadorCumplimientoService analizadorService,
+                                         BuscadorConsorcioService buscadorConsorcioService,
+                                         @Value("${analisis.sugerencia.max-propuestas:3}") int maxPropuestas) {
         this.obtenerEmpresasPort = obtenerEmpresasPort;
         this.obtenerRequisitosPort = obtenerRequisitosPort;
         this.analizadorService = analizadorService;
+        this.buscadorConsorcioService = buscadorConsorcioService;
+        this.maxPropuestas = maxPropuestas;
     }
 
     @Override
@@ -51,31 +56,11 @@ public class EvaluarCumplimientoAppService implements EvaluarCumplimientoUseCase
         BigDecimal porcentajeSolicitante = porcentajeSimulacion != null
                 ? porcentajeSimulacion
                 : PORCENTAJE_SIMULACION_DEFAULT;
-        BigDecimal porcentajeCandidata = BigDecimal.ONE.subtract(porcentajeSolicitante);
 
-        List<SugerenciaConsorcio> sugerencias = new ArrayList<>();
         List<Empresa> todasLasEmpresas = obtenerEmpresasPort.obtenerTodas();
 
-        for (Empresa otraEmpresa : todasLasEmpresas) {
-            if (otraEmpresa.getId().equals(empresa.getId())) {
-                continue;
-            }
-
-            List<IntegranteEvaluacion> integrantes = List.of(
-                new IntegranteEvaluacion(empresa, porcentajeSolicitante),
-                new IntegranteEvaluacion(otraEmpresa, porcentajeCandidata)
-            );
-
-            ResultadoEvaluacion resultadoConsorcio = analizadorService.evaluarConsorcio(integrantes, requisito);
-
-            if (resultadoConsorcio.cumpleGlobal()) {
-                sugerencias.add(new SugerenciaConsorcio(
-                    otraEmpresa.getId(),
-                    otraEmpresa.getNit(),
-                    otraEmpresa.getRazonSocial()
-                ));
-            }
-        }
+        List<PropuestaConsorcio> sugerencias = buscadorConsorcioService.buscar(
+                empresa, todasLasEmpresas, requisito, porcentajeSolicitante, maxPropuestas);
 
         return new ResultadoEvaluacion(
             resultadoIndividual.empresaId(),
