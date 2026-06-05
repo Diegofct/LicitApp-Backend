@@ -9,11 +9,9 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class EvaluarCumplimientoResponseDTO {
-    private Long empresaId;
-    private Long cuadroDeObraId;
-    private String tipoParticipacion;
+public class PropuestaConsorcioDTO {
+    private List<IntegrantePropuestoDTO> integrantes;
     private boolean cumpleGlobal;
-    private List<DetalleRequisitoDTO> detalles;
-    private List<PropuestaConsorcioDTO> sugerencias;
+    private List<String> requisitosCubiertos;
+    private List<String> requisitosPendientes;
 }

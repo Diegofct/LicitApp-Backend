@@ -75,8 +75,12 @@ public class AnalizadorCumplimientoService {
      * Reglas aplicadas (Decreto 1082/2015 y práctica estándar):
      *  - Ratios financieros (liquidez, endeudamiento, RCI, ROE, ROA): promedio ponderado
      *    Σᵢ ratioᵢ × %ᵢ.
-     *  - Magnitudes acumulables (patrimonio, capital de trabajo, experiencia SMMLV,
-     *    K residual): suma ponderada Σᵢ Xᵢ × %ᵢ.
+     *  - Magnitudes financieras acumulables (patrimonio, capital de trabajo, K residual):
+     *    suma ponderada Σᵢ Xᵢ × %ᵢ.
+     *  - Experiencia (SMMLV): suma directa Σᵢ Xᵢ, SIN ponderar por el % de participación.
+     *    Conforme a los Documentos Tipo de obra de Colombia Compra Eficiente, cada integrante
+     *    aporta el total de su experiencia acreditada al consorcio (algunos pliegos exigen
+     *    además un % mínimo de participación del integrante que la aporta — no modelado aún).
      *
      * El porcentaje de cada integrante debe venir como fracción en (0,1]. Se asume
      * que el caller ya validó que la suma es 1 (lo hace ConformacionConsorcioAppService
@@ -129,7 +133,9 @@ public class AnalizadorCumplimientoService {
                 BigDecimal expIntegrante = ReglaExperiencia.validarExperiencia(
                         ie.empresa().getExperiencias(), BigDecimal.ZERO, esMipymeOMujer(ie.empresa()), limiteContratos
                 ).totalSmmlv();
-                expConsorciada = expConsorciada.add(expIntegrante.multiply(ie.porcentaje()));
+                // La experiencia se SUMA completa (no se pondera por %): cada integrante aporta
+                // el total de sus contratos acreditados al consorcio.
+                expConsorciada = expConsorciada.add(expIntegrante);
             }
             expConsorciada = expConsorciada.setScale(ESCALA_RATIO, RoundingMode.HALF_UP);
             boolean cumple = expConsorciada.compareTo(reqExp) >= 0;
