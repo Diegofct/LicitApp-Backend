@@ -33,6 +33,15 @@ public class Empresa {
     @Column(name = "tamano_empresa")
     private String tamanoEmpresa;
 
+    // Flags explícitos que separan dos conceptos antes fusionados en el heurístico sobre
+    // tamanoEmpresa: tamaño MiPyme vs. condición de proponente mujer. Afectan habilitantes
+    // distintos (hoy: ambos otorgan el beneficio de +2 contratos de experiencia).
+    @Column(name = "mipyme", nullable = false)
+    private boolean mipyme;
+
+    @Column(name = "proponente_mujer", nullable = false)
+    private boolean proponenteMujer;
+
     @Column(name = "representante_legal")
     private String representanteLegal;
 

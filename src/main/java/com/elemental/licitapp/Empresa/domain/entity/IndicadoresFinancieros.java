@@ -1,5 +1,6 @@
 package com.elemental.licitapp.Empresa.domain.entity;
 
+import com.elemental.licitapp.Empresa.domain.enums.EstadoIndicador;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -42,14 +43,27 @@ public class IndicadoresFinancieros {
     private BigDecimal gastosInteres;
 
     // Indicadores de Capacidad Financiera (Colombia - Decreto 1082/2015)
+    // Cada ratio guarda su valor (null si es indeterminado) y un estado que explica el porqué.
     @Column(precision = 20, scale = 4)
     private BigDecimal liquidez;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_liquidez", length = 30)
+    private EstadoIndicador estadoLiquidez;
 
     @Column(precision = 20, scale = 4)
     private BigDecimal endeudamiento;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_endeudamiento", length = 30)
+    private EstadoIndicador estadoEndeudamiento;
+
     @Column(name = "cobertura_interes", precision = 20, scale = 4)
     private BigDecimal razonCoberturaInteres;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_cobertura_interes", length = 30)
+    private EstadoIndicador estadoRazonCoberturaInteres;
 
     @Column(precision = 20, scale = 2)
     private BigDecimal patrimonio;
@@ -61,8 +75,16 @@ public class IndicadoresFinancieros {
     @Column(name = "rentabilidad_patrimonio", precision = 20, scale = 4)
     private BigDecimal rentabilidadPatrimonio;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_rentabilidad_patrimonio", length = 30)
+    private EstadoIndicador estadoRentabilidadPatrimonio;
+
     @Column(name = "rentabilidad_activo", precision = 20, scale = 4)
     private BigDecimal rentabilidadActivo;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_rentabilidad_activo", length = 30)
+    private EstadoIndicador estadoRentabilidadActivo;
 
     @OneToOne
     @JoinColumn(name = "empresa_id")
@@ -75,31 +97,36 @@ public class IndicadoresFinancieros {
     public void recalcular() {
         this.patrimonio = calcularPatrimonio(activoTotal, pasivoTotal);
         this.capitalTrabajo = calcularCapitalTrabajo(activoCorriente, pasivoCorriente);
-        this.liquidez = ratio(activoCorriente, pasivoCorriente);
-        this.endeudamiento = ratio(pasivoTotal, activoTotal);
-        this.razonCoberturaInteres = ratio(utilidadOperacional, gastosInteres);
-        this.rentabilidadPatrimonio = ratio(utilidadOperacional, this.patrimonio);
-        this.rentabilidadActivo = ratio(utilidadOperacional, activoTotal);
-    }
 
-    public static BigDecimal calcularLiquidez(BigDecimal activoCorriente, BigDecimal pasivoCorriente) {
-        return ratio(activoCorriente, pasivoCorriente);
-    }
+        // Liquidez (AC/PC): sin pasivo corriente = no debe a corto plazo → favorable.
+        ResultadoIndicador liq = ResultadoIndicador.calcular(
+                activoCorriente, pasivoCorriente, ESCALA_RATIO, EstadoIndicador.INDETERMINADO_FAVORABLE);
+        this.liquidez = liq.valor();
+        this.estadoLiquidez = liq.estado();
 
-    public static BigDecimal calcularEndeudamiento(BigDecimal pasivoTotal, BigDecimal activoTotal) {
-        return ratio(pasivoTotal, activoTotal);
-    }
+        // Endeudamiento (PT/AT): sin activos = dato no evaluable → a verificar.
+        ResultadoIndicador end = ResultadoIndicador.calcular(
+                pasivoTotal, activoTotal, ESCALA_RATIO, EstadoIndicador.INDETERMINADO_A_VERIFICAR);
+        this.endeudamiento = end.valor();
+        this.estadoEndeudamiento = end.estado();
 
-    public static BigDecimal calcularRCI(BigDecimal utilidadOperacional, BigDecimal gastosInteres) {
-        return ratio(utilidadOperacional, gastosInteres);
-    }
+        // RCI (UtilOp/GastosInt): sin gastos de interés = los cubre por definición → favorable.
+        ResultadoIndicador rci = ResultadoIndicador.calcular(
+                utilidadOperacional, gastosInteres, ESCALA_RATIO, EstadoIndicador.INDETERMINADO_FAVORABLE);
+        this.razonCoberturaInteres = rci.valor();
+        this.estadoRazonCoberturaInteres = rci.estado();
 
-    public static BigDecimal calcularROE(BigDecimal utilidadOperacional, BigDecimal patrimonio) {
-        return ratio(utilidadOperacional, patrimonio);
-    }
+        // ROE (UtilOp/Patrimonio): patrimonio 0/negativo = inviabilidad → a verificar.
+        ResultadoIndicador roe = ResultadoIndicador.calcular(
+                utilidadOperacional, this.patrimonio, ESCALA_RATIO, EstadoIndicador.INDETERMINADO_A_VERIFICAR);
+        this.rentabilidadPatrimonio = roe.valor();
+        this.estadoRentabilidadPatrimonio = roe.estado();
 
-    public static BigDecimal calcularROA(BigDecimal utilidadOperacional, BigDecimal activoTotal) {
-        return ratio(utilidadOperacional, activoTotal);
+        // ROA (UtilOp/AT): sin activos = dato no evaluable → a verificar.
+        ResultadoIndicador roa = ResultadoIndicador.calcular(
+                utilidadOperacional, activoTotal, ESCALA_RATIO, EstadoIndicador.INDETERMINADO_A_VERIFICAR);
+        this.rentabilidadActivo = roa.valor();
+        this.estadoRentabilidadActivo = roa.estado();
     }
 
     public static BigDecimal calcularCapitalTrabajo(BigDecimal activoCorriente, BigDecimal pasivoCorriente) {
@@ -111,12 +138,5 @@ public class IndicadoresFinancieros {
     public static BigDecimal calcularPatrimonio(BigDecimal activoTotal, BigDecimal pasivoTotal) {
         if (activoTotal == null || pasivoTotal == null) return null;
         return activoTotal.subtract(pasivoTotal).setScale(ESCALA_MONEDA, RoundingMode.HALF_UP);
-    }
-
-    private static BigDecimal ratio(BigDecimal numerador, BigDecimal denominador) {
-        if (numerador == null || denominador == null || denominador.compareTo(BigDecimal.ZERO) == 0) {
-            return BigDecimal.ZERO;
-        }
-        return numerador.divide(denominador, ESCALA_RATIO, RoundingMode.HALF_UP);
     }
 }

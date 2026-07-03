@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -24,22 +26,22 @@ public class RequisitoLicitacionRequestDTO {
     private Integer n;
 
     @PositiveOrZero(message = "presupuesto no puede ser negativo")
-    private Double presupuesto;
+    private BigDecimal presupuesto;
 
     @PositiveOrZero(message = "patrimonio no puede ser negativo")
-    private Double patrimonio;
+    private BigDecimal patrimonio;
 
     @PositiveOrZero(message = "capitalTrabajo no puede ser negativo")
-    private Double capitalTrabajo;
+    private BigDecimal capitalTrabajo;
 
-    private Double liquidez;
-    private Double endeudamiento;
-    private Double razonCoberturaInteres;
-    private Double rentabilidadPatrimonio;
-    private Double rentabilidadActivo;
+    private BigDecimal liquidez;
+    private BigDecimal endeudamiento;
+    private BigDecimal razonCoberturaInteres;
+    private BigDecimal rentabilidadPatrimonio;
+    private BigDecimal rentabilidadActivo;
 
     @PositiveOrZero(message = "kResidualProceso no puede ser negativo")
-    private Double kResidualProceso;
+    private BigDecimal kResidualProceso;
 
     @PositiveOrZero(message = "poeAnticipo no puede ser negativo")
     private Double poeAnticipo;

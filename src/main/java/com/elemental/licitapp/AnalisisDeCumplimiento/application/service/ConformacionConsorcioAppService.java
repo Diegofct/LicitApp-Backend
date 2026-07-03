@@ -69,6 +69,14 @@ public class ConformacionConsorcioAppService
             throw new IllegalArgumentException("El tipo de participación es obligatorio.");
         }
 
+        // El nombre del proponente plural es obligatorio para CONSORCIO/UNION_TEMPORAL.
+        boolean esPlural = c.getTipoParticipacion() == TipoParticipacion.CONSORCIO
+                || c.getTipoParticipacion() == TipoParticipacion.UNION_TEMPORAL;
+        if (esPlural && (c.getNombre() == null || c.getNombre().isBlank())) {
+            throw new IllegalArgumentException(
+                    "El nombre del " + c.getTipoParticipacion() + " es obligatorio.");
+        }
+
         List<IntegranteConsorcio> integrantes = c.getIntegrantes();
         if (integrantes == null || integrantes.isEmpty()) {
             throw new IllegalArgumentException("Debe haber al menos un integrante.");

@@ -5,6 +5,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Entity
 @Data
 @NoArgsConstructor
@@ -40,35 +42,38 @@ public class RequisitoLicitacion {
     private Integer n;
 
     // --- INDICADORES FINANCIEROS REQUERIDOS ---
-    @Column(name = "presupuesto_licitacion")
-    private Double presupuesto; // Presupuesto oficial capturado en el modal
+    // Montos en COP: scale 2, precision 20 (paridad con IndicadoresFinancieros).
+    @Column(name = "presupuesto_licitacion", precision = 20, scale = 2)
+    private BigDecimal presupuesto; // Presupuesto oficial capturado en el modal
 
-    @Column(name = "patrimonio_pliego")
-    private Double patrimonio; // El "Patrimonio" que pide el pliego
+    @Column(name = "patrimonio_pliego", precision = 20, scale = 2)
+    private BigDecimal patrimonio; // El "Patrimonio" que pide el pliego
 
-    @Column(name = "capital_trabajo_req")
-    private Double capitalTrabajo; // Capital de Trabajo mínimo requerido
+    @Column(name = "capital_trabajo_req", precision = 20, scale = 2)
+    private BigDecimal capitalTrabajo; // Capital de Trabajo mínimo requerido
 
-    // Nuevos campos para comparación completa
-    @Column(name = "liquidez_req")
-    private Double liquidez;
+    // Ratios/indices: scale 4, precision 20 (paridad con IndicadoresFinancieros).
+    @Column(name = "liquidez_req", precision = 20, scale = 4)
+    private BigDecimal liquidez;
 
-    @Column(name = "endeudamiento_req")
-    private Double endeudamiento;
+    @Column(name = "endeudamiento_req", precision = 20, scale = 4)
+    private BigDecimal endeudamiento;
 
-    @Column(name = "cobertura_interes_req")
-    private Double razonCoberturaInteres;
+    @Column(name = "cobertura_interes_req", precision = 20, scale = 4)
+    private BigDecimal razonCoberturaInteres;
 
-    @Column(name = "rentabilidad_patrimonio_req")
-    private Double rentabilidadPatrimonio;
+    @Column(name = "rentabilidad_patrimonio_req", precision = 20, scale = 4)
+    private BigDecimal rentabilidadPatrimonio;
 
-    @Column(name = "rentabilidad_activo_req")
-    private Double rentabilidadActivo;
+    @Column(name = "rentabilidad_activo_req", precision = 20, scale = 4)
+    private BigDecimal rentabilidadActivo;
 
     // --- CAPACIDAD RESIDUAL (K) ---
-    @Column(name = "k_residual_proceso")
-    private Double kResidualProceso;
+    @Column(name = "k_residual_proceso", precision = 20, scale = 2)
+    private BigDecimal kResidualProceso;
 
+    // poeAnticipo se mantiene como Double por decision explicita (no es monto COP
+    // ni se compara contra indicadores; no lo consume ningun calculo).
     @Column(name = "poe_anticipo")
     private Double poeAnticipo; // El % de anticipo según el POE
 
