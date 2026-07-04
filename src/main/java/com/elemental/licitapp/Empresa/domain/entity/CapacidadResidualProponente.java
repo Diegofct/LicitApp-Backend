@@ -5,6 +5,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "capacidad_residual_proponente")
@@ -42,6 +43,12 @@ public class CapacidadResidualProponente {
 
     @Column(name = "resultado_k")
     private BigDecimal resultadoK;
+
+    // Momento del último cálculo de la K. Permite seleccionar de forma determinista la CRP
+    // vigente (la más reciente) del proponente. Nullable: registros previos a la migración
+    // pueden no tenerla. Lo setea la capa de servicio al recalcular (patrón fechaConformacion).
+    @Column(name = "fecha_calculo")
+    private LocalDateTime fechaCalculo;
 
     /**
      * Recalcula el resultado K (CRP) usando los puntajes y saldos actuales.

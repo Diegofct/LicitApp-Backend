@@ -6,6 +6,7 @@ import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.IntegrantePro
 import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.PropuestaConsorcio;
 import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.ResultadoEvaluacion;
 import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.TipoParticipacion;
+import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.TipoRequisito;
 import com.elemental.licitapp.AnalisisDeCumplimiento.domain.service.RepartidorParticipacion;
 import com.elemental.licitapp.CuadroDeObra.domain.entity.RequisitoLicitacion;
 import com.elemental.licitapp.Empresa.domain.entity.Empresa;
@@ -57,7 +58,7 @@ public class BuscadorConsorcioService {
                                            int maxPropuestas) {
 
         ResultadoEvaluacion individual = analizador.analizar(solicitante, requisito, TipoParticipacion.INDIVIDUAL);
-        List<String> deficit = nombresNoCumplidos(individual);
+        List<TipoRequisito> deficit = tiposNoCumplidos(individual);
         if (deficit.isEmpty()) {
             return List.of();
         }
@@ -158,9 +159,16 @@ public class BuscadorConsorcioService {
     }
 
     private PropuestaConsorcio toPropuesta(Contexto ctx, List<Empresa> candidatas, ResultadoEvaluacion resultado) {
-        List<String> noCumplidos = nombresNoCumplidos(resultado);
-        List<String> cubiertos = ctx.deficit().stream().filter(r -> !noCumplidos.contains(r)).toList();
-        List<String> pendientes = ctx.deficit().stream().filter(noCumplidos::contains).toList();
+        List<TipoRequisito> noCumplidos = tiposNoCumplidos(resultado);
+        // La identidad de requisito es el enum; se traduce a etiqueta legible solo al exponerse.
+        List<String> cubiertos = ctx.deficit().stream()
+                .filter(r -> !noCumplidos.contains(r))
+                .map(TipoRequisito::etiqueta)
+                .toList();
+        List<String> pendientes = ctx.deficit().stream()
+                .filter(noCumplidos::contains)
+                .map(TipoRequisito::etiqueta)
+                .toList();
 
         Map<Long, BigDecimal> reparto = repartoDe(ctx, candidatas);
         List<IntegrantePropuesto> integrantes = new ArrayList<>();
@@ -168,10 +176,13 @@ public class BuscadorConsorcioService {
                 ctx.solicitante().getId(), ctx.solicitante().getNit(), ctx.solicitante().getRazonSocial(),
                 ctx.porcentajeSolicitante(), true, List.of()));
         for (Empresa c : candidatas) {
+            List<String> fortalezasEtiquetas = ctx.fortalezas().getOrDefault(c.getId(), List.of()).stream()
+                    .map(TipoRequisito::etiqueta)
+                    .toList();
             integrantes.add(new IntegrantePropuesto(
                     c.getId(), c.getNit(), c.getRazonSocial(),
                     reparto.get(c.getId()), false,
-                    ctx.fortalezas().getOrDefault(c.getId(), List.of())));
+                    fortalezasEtiquetas));
         }
         return new PropuestaConsorcio(integrantes, resultado.cumpleGlobal(), cubiertos, pendientes);
     }
@@ -183,20 +194,20 @@ public class BuscadorConsorcioService {
      * rubros en distintas unidades (pesos, SMMLV, ratios).
      */
     private Contexto construirContexto(Empresa solicitante, List<Empresa> pool, RequisitoLicitacion requisito,
-                                       BigDecimal porcentajeSolicitante, List<String> deficit) {
+                                       BigDecimal porcentajeSolicitante, List<TipoRequisito> deficit) {
         Map<Long, BigDecimal> pesos = new java.util.HashMap<>();
-        Map<Long, List<String>> fortalezas = new java.util.HashMap<>();
+        Map<Long, List<TipoRequisito>> fortalezas = new java.util.HashMap<>();
 
         for (Empresa c : pool) {
             ResultadoEvaluacion ind = analizador.analizar(c, requisito, TipoParticipacion.INDIVIDUAL);
             BigDecimal score = BigDecimal.ZERO;
-            List<String> fuertesEn = new ArrayList<>();
+            List<TipoRequisito> fuertesEn = new ArrayList<>();
             for (DetalleRequisito d : ind.detalles()) {
-                if (!deficit.contains(d.nombre())) {
+                if (!deficit.contains(d.tipo())) {
                     continue;
                 }
                 if (d.cumple()) {
-                    fuertesEn.add(d.nombre());
+                    fuertesEn.add(d.tipo());
                 }
                 if (d.valorRequerido() != null && d.valorRequerido().signum() > 0 && d.valorActual() != null) {
                     score = score.add(d.valorActual().divide(d.valorRequerido(), ESCALA, RoundingMode.HALF_UP));
@@ -211,12 +222,12 @@ public class BuscadorConsorcioService {
     }
 
     private static boolean degrada(ResultadoEvaluacion antes, ResultadoEvaluacion despues) {
-        Map<String, Boolean> cumpleDespues = new java.util.HashMap<>();
+        Map<TipoRequisito, Boolean> cumpleDespues = new java.util.HashMap<>();
         for (DetalleRequisito d : despues.detalles()) {
-            cumpleDespues.put(d.nombre(), d.cumple());
+            cumpleDespues.put(d.tipo(), d.cumple());
         }
         for (DetalleRequisito d : antes.detalles()) {
-            if (d.cumple() && Boolean.FALSE.equals(cumpleDespues.get(d.nombre()))) {
+            if (d.cumple() && Boolean.FALSE.equals(cumpleDespues.get(d.tipo()))) {
                 return true;
             }
         }
@@ -227,10 +238,10 @@ public class BuscadorConsorcioService {
         return (int) resultado.detalles().stream().filter(DetalleRequisito::cumple).count();
     }
 
-    private static List<String> nombresNoCumplidos(ResultadoEvaluacion resultado) {
+    private static List<TipoRequisito> tiposNoCumplidos(ResultadoEvaluacion resultado) {
         return resultado.detalles().stream()
                 .filter(d -> !d.cumple())
-                .map(DetalleRequisito::nombre)
+                .map(DetalleRequisito::tipo)
                 .toList();
     }
 
@@ -245,8 +256,8 @@ public class BuscadorConsorcioService {
             RequisitoLicitacion requisito,
             BigDecimal porcentajeSolicitante,
             BigDecimal complemento,
-            List<String> deficit,
+            List<TipoRequisito> deficit,
             Map<Long, BigDecimal> pesos,
-            Map<Long, List<String>> fortalezas
+            Map<Long, List<TipoRequisito>> fortalezas
     ) {}
 }

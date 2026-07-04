@@ -16,6 +16,7 @@ import java.util.List;
 public class ConsorcioResponseDTO {
     private Long id;
     private Long cuadroDeObraId;
+    private String nombre;
     private TipoParticipacion tipoParticipacion;
     private LocalDateTime fechaConformacion;
     private String observaciones;

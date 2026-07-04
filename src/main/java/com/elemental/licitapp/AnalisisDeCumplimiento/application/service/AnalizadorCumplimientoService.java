@@ -1,19 +1,23 @@
 package com.elemental.licitapp.AnalisisDeCumplimiento.application.service;
 
 import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.DetalleRequisito;
+import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.EstadoRequisito;
 import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.IntegranteEvaluacion;
 import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.ResultadoEvaluacion;
 import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.TipoParticipacion;
+import com.elemental.licitapp.AnalisisDeCumplimiento.domain.entity.TipoRequisito;
 import com.elemental.licitapp.AnalisisDeCumplimiento.domain.service.reglas.ReglaExperiencia;
 import com.elemental.licitapp.CuadroDeObra.domain.entity.RequisitoLicitacion;
 import com.elemental.licitapp.Empresa.domain.entity.CapacidadResidualProponente;
 import com.elemental.licitapp.Empresa.domain.entity.Empresa;
 import com.elemental.licitapp.Empresa.domain.entity.IndicadoresFinancieros;
+import com.elemental.licitapp.Empresa.domain.enums.EstadoIndicador;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
 
@@ -22,6 +26,15 @@ public class AnalizadorCumplimientoService {
 
     private static final int ESCALA_RATIO = 4;
     private static final int ESCALA_MONEDA = 2;
+
+    /**
+     * La evaluación de experiencia solo compara el monto agregado en SMMLV. La experiencia
+     * específica (objeto del contrato) y la clasificación UNSPSC no se verifican de forma
+     * automática; se advierte en el detalle para no leer un "CUMPLE" como validación completa.
+     */
+    private static final String NOTA_EXPERIENCIA_ESPECIFICA =
+        " Verificación solo por monto agregado (SMMLV); la experiencia específica y la clasificación "
+        + "UNSPSC no se verifican automáticamente — requiere revisión manual.";
 
     /**
      * Compara los indicadores YA CALCULADOS de la empresa con los requisitos del pliego.
@@ -33,17 +46,18 @@ public class AnalizadorCumplimientoService {
 
         if (ind == null) {
             return new ResultadoEvaluacion(empresa.getId(), requisito.getCuadroDeObra().getId(), tipo, false, List.of(
-                new DetalleRequisito("General", BigDecimal.ZERO, BigDecimal.ZERO, false, "La empresa no tiene indicadores financieros registrados.")
+                new DetalleRequisito(TipoRequisito.GENERAL, BigDecimal.ZERO, BigDecimal.ZERO, false, "La empresa no tiene indicadores financieros registrados.")
             ));
         }
 
-        evaluarMayorIgual(detalles, "Índice de Liquidez", requisito.getLiquidez(), ind.getLiquidez());
-        evaluarMenorIgual(detalles, "Nivel de Endeudamiento", requisito.getEndeudamiento(), ind.getEndeudamiento());
-        evaluarMayorIgual(detalles, "Capital de Trabajo", requisito.getCapitalTrabajo(), ind.getCapitalTrabajo());
-        evaluarMayorIgual(detalles, "Patrimonio Total", requisito.getPatrimonio(), ind.getPatrimonio());
-        evaluarMayorIgual(detalles, "Cobertura de Intereses", requisito.getRazonCoberturaInteres(), ind.getRazonCoberturaInteres());
-        evaluarMayorIgual(detalles, "ROE", requisito.getRentabilidadPatrimonio(), ind.getRentabilidadPatrimonio());
-        evaluarMayorIgual(detalles, "ROA", requisito.getRentabilidadActivo(), ind.getRentabilidadActivo());
+        evaluarMayorIgual(detalles, TipoRequisito.LIQUIDEZ, requisito.getLiquidez(), ind.getLiquidez(), ind.getEstadoLiquidez());
+        evaluarMenorIgual(detalles, TipoRequisito.ENDEUDAMIENTO, requisito.getEndeudamiento(), ind.getEndeudamiento(), ind.getEstadoEndeudamiento());
+        // Capital de Trabajo y Patrimonio son magnitudes (resta, no división): no tienen estado de indeterminación.
+        evaluarMayorIgual(detalles, TipoRequisito.CAPITAL_TRABAJO, requisito.getCapitalTrabajo(), ind.getCapitalTrabajo(), null);
+        evaluarMayorIgual(detalles, TipoRequisito.PATRIMONIO, requisito.getPatrimonio(), ind.getPatrimonio(), null);
+        evaluarMayorIgual(detalles, TipoRequisito.RCI, requisito.getRazonCoberturaInteres(), ind.getRazonCoberturaInteres(), ind.getEstadoRazonCoberturaInteres());
+        evaluarMayorIgual(detalles, TipoRequisito.ROE, requisito.getRentabilidadPatrimonio(), ind.getRentabilidadPatrimonio(), ind.getEstadoRentabilidadPatrimonio());
+        evaluarMayorIgual(detalles, TipoRequisito.ROA, requisito.getRentabilidadActivo(), ind.getRentabilidadActivo(), ind.getEstadoRentabilidadActivo());
 
         Double valorObraSmmlv = requisito.getCuadroDeObra().getValorSMMLV();
         if (valorObraSmmlv != null && valorObraSmmlv > 0) {
@@ -52,15 +66,15 @@ public class AnalizadorCumplimientoService {
 
             ReglaExperiencia.ResultadoExperiencia resExp = ReglaExperiencia.validarExperiencia(
                     empresa.getExperiencias(), reqExp, esMipymeOMujer(empresa), limiteContratos);
-            detalles.add(new DetalleRequisito("Experiencia Acumulada (SMMLV)", reqExp, resExp.totalSmmlv(), resExp.cumple(),
-                resExp.cumple() ? "CUMPLE" : "NO CUMPLE"));
+            detalles.add(new DetalleRequisito(TipoRequisito.EXPERIENCIA, reqExp, resExp.totalSmmlv(), resExp.cumple(),
+                mensajeExperiencia(resExp.cumple())));
         }
 
         if (requisito.getKResidualProceso() != null) {
-            BigDecimal reqK = BigDecimal.valueOf(requisito.getKResidualProceso());
+            BigDecimal reqK = requisito.getKResidualProceso();
             BigDecimal crp = obtenerUltimaK(empresa);
             boolean cumple = crp.compareTo(reqK) >= 0;
-            detalles.add(new DetalleRequisito("Capacidad Residual (K)", reqK, crp, cumple,
+            detalles.add(new DetalleRequisito(TipoRequisito.CAPACIDAD_RESIDUAL, reqK, crp, cumple,
                 cumple ? "CUMPLE" : "NO CUMPLE: Capacidad insuficiente (" + crp + " vs " + reqK + ")"));
         }
 
@@ -97,7 +111,7 @@ public class AnalizadorCumplimientoService {
         for (IntegranteEvaluacion ie : integrantes) {
             if (ie.empresa().getIndicadores() == null) {
                 return new ResultadoEvaluacion(primerEmpresaId, cuadroId, TipoParticipacion.CONSORCIO, false, List.of(
-                    new DetalleRequisito("General", BigDecimal.ZERO, BigDecimal.ZERO, false,
+                    new DetalleRequisito(TipoRequisito.GENERAL, BigDecimal.ZERO, BigDecimal.ZERO, false,
                         "El integrante con empresaId=" + ie.empresa().getId() + " no tiene indicadores financieros registrados.")
                 ));
             }
@@ -105,22 +119,22 @@ public class AnalizadorCumplimientoService {
 
         List<DetalleRequisito> detalles = new ArrayList<>();
 
-        // Ratios → promedio ponderado.
-        evaluarRatioPonderado(detalles, "Índice de Liquidez", requisito.getLiquidez(),
-                integrantes, IndicadoresFinancieros::getLiquidez, true);
-        evaluarRatioPonderado(detalles, "Nivel de Endeudamiento", requisito.getEndeudamiento(),
-                integrantes, IndicadoresFinancieros::getEndeudamiento, false);
-        evaluarRatioPonderado(detalles, "Cobertura de Intereses", requisito.getRazonCoberturaInteres(),
-                integrantes, IndicadoresFinancieros::getRazonCoberturaInteres, true);
-        evaluarRatioPonderado(detalles, "ROE", requisito.getRentabilidadPatrimonio(),
-                integrantes, IndicadoresFinancieros::getRentabilidadPatrimonio, true);
-        evaluarRatioPonderado(detalles, "ROA", requisito.getRentabilidadActivo(),
-                integrantes, IndicadoresFinancieros::getRentabilidadActivo, true);
+        // Ratios → promedio ponderado (con manejo de indeterminados por integrante).
+        evaluarRatioPonderado(detalles, TipoRequisito.LIQUIDEZ, requisito.getLiquidez(),
+                integrantes, IndicadoresFinancieros::getLiquidez, IndicadoresFinancieros::getEstadoLiquidez, true);
+        evaluarRatioPonderado(detalles, TipoRequisito.ENDEUDAMIENTO, requisito.getEndeudamiento(),
+                integrantes, IndicadoresFinancieros::getEndeudamiento, IndicadoresFinancieros::getEstadoEndeudamiento, false);
+        evaluarRatioPonderado(detalles, TipoRequisito.RCI, requisito.getRazonCoberturaInteres(),
+                integrantes, IndicadoresFinancieros::getRazonCoberturaInteres, IndicadoresFinancieros::getEstadoRazonCoberturaInteres, true);
+        evaluarRatioPonderado(detalles, TipoRequisito.ROE, requisito.getRentabilidadPatrimonio(),
+                integrantes, IndicadoresFinancieros::getRentabilidadPatrimonio, IndicadoresFinancieros::getEstadoRentabilidadPatrimonio, true);
+        evaluarRatioPonderado(detalles, TipoRequisito.ROA, requisito.getRentabilidadActivo(),
+                integrantes, IndicadoresFinancieros::getRentabilidadActivo, IndicadoresFinancieros::getEstadoRentabilidadActivo, true);
 
         // Magnitudes acumulables → suma ponderada.
-        evaluarMagnitudPonderada(detalles, "Capital de Trabajo", requisito.getCapitalTrabajo(),
+        evaluarMagnitudPonderada(detalles, TipoRequisito.CAPITAL_TRABAJO, requisito.getCapitalTrabajo(),
                 integrantes, IndicadoresFinancieros::getCapitalTrabajo);
-        evaluarMagnitudPonderada(detalles, "Patrimonio Total", requisito.getPatrimonio(),
+        evaluarMagnitudPonderada(detalles, TipoRequisito.PATRIMONIO, requisito.getPatrimonio(),
                 integrantes, IndicadoresFinancieros::getPatrimonio);
 
         // Experiencia consorciada: cada integrante aporta su experiencia × su %.
@@ -139,20 +153,20 @@ public class AnalizadorCumplimientoService {
             }
             expConsorciada = expConsorciada.setScale(ESCALA_RATIO, RoundingMode.HALF_UP);
             boolean cumple = expConsorciada.compareTo(reqExp) >= 0;
-            detalles.add(new DetalleRequisito("Experiencia Acumulada (SMMLV)", reqExp, expConsorciada, cumple,
-                cumple ? "CUMPLE" : "NO CUMPLE"));
+            detalles.add(new DetalleRequisito(TipoRequisito.EXPERIENCIA, reqExp, expConsorciada, cumple,
+                mensajeExperiencia(cumple)));
         }
 
         // K residual consorciado: suma ponderada de la última K registrada por cada integrante.
         if (requisito.getKResidualProceso() != null) {
-            BigDecimal reqK = BigDecimal.valueOf(requisito.getKResidualProceso());
+            BigDecimal reqK = requisito.getKResidualProceso();
             BigDecimal kConsorciado = BigDecimal.ZERO;
             for (IntegranteEvaluacion ie : integrantes) {
                 kConsorciado = kConsorciado.add(obtenerUltimaK(ie.empresa()).multiply(ie.porcentaje()));
             }
             kConsorciado = kConsorciado.setScale(ESCALA_MONEDA, RoundingMode.HALF_UP);
             boolean cumple = kConsorciado.compareTo(reqK) >= 0;
-            detalles.add(new DetalleRequisito("Capacidad Residual (K)", reqK, kConsorciado, cumple,
+            detalles.add(new DetalleRequisito(TipoRequisito.CAPACIDAD_RESIDUAL, reqK, kConsorciado, cumple,
                 cumple ? "CUMPLE" : "NO CUMPLE: Suma insuficiente (" + kConsorciado + ")"));
         }
 
@@ -160,47 +174,125 @@ public class AnalizadorCumplimientoService {
         return new ResultadoEvaluacion(primerEmpresaId, cuadroId, TipoParticipacion.CONSORCIO, cumpleGlobal, detalles);
     }
 
-    private void evaluarMayorIgual(List<DetalleRequisito> detalles, String nombre, Double reqVal, BigDecimal actual) {
+    private void evaluarMayorIgual(List<DetalleRequisito> detalles, TipoRequisito tipo, BigDecimal reqVal,
+                                   BigDecimal actual, EstadoIndicador estado) {
         if (reqVal == null) return;
-        BigDecimal req = BigDecimal.valueOf(reqVal);
+        BigDecimal req = reqVal;
+        if (resolverIndeterminado(detalles, tipo, req, estado)) return;
         BigDecimal actualSafe = actual != null ? actual : BigDecimal.ZERO;
         boolean cumple = actualSafe.compareTo(req) >= 0;
-        detalles.add(new DetalleRequisito(nombre, req, actualSafe, cumple,
+        detalles.add(new DetalleRequisito(tipo, req, actualSafe, cumple,
             cumple ? "CUMPLE" : "NO CUMPLE: Menor al requerido (" + req + ")"));
     }
 
-    private void evaluarMenorIgual(List<DetalleRequisito> detalles, String nombre, Double reqVal, BigDecimal actual) {
+    private void evaluarMenorIgual(List<DetalleRequisito> detalles, TipoRequisito tipo, BigDecimal reqVal,
+                                   BigDecimal actual, EstadoIndicador estado) {
         if (reqVal == null) return;
-        BigDecimal req = BigDecimal.valueOf(reqVal);
+        BigDecimal req = reqVal;
+        if (resolverIndeterminado(detalles, tipo, req, estado)) return;
         BigDecimal actualSafe = actual != null ? actual : BigDecimal.ZERO;
         boolean cumple = actualSafe.compareTo(req) <= 0;
-        detalles.add(new DetalleRequisito(nombre, req, actualSafe, cumple,
+        detalles.add(new DetalleRequisito(tipo, req, actualSafe, cumple,
             cumple ? "CUMPLE" : "NO CUMPLE: Supera el máximo (" + req + ")"));
     }
 
-    private void evaluarRatioPonderado(List<DetalleRequisito> detalles, String nombre, Double reqVal,
+    /**
+     * Resuelve un indicador indeterminado a partir de su estado, sin comparar contra el
+     * requerido (no hay valor numérico que comparar). Devuelve true si lo manejó (y agregó
+     * el detalle); false si el indicador es calculable y debe seguir la comparación normal.
+     *
+     * <ul>
+     *   <li>FAVORABLE → CUMPLE por definición (p.ej. RCI sin gastos de interés, liquidez sin pasivo cte.).</li>
+     *   <li>A_VERIFICAR / DATO_FALTANTE → NO pasa, pero marcado como "requiere verificación",
+     *       no como un incumplimiento numérico engañoso. Evita el falso CUMPLE que daba el 0
+     *       en endeudamiento y el falso NO CUMPLE en el resto.</li>
+     * </ul>
+     */
+    private boolean resolverIndeterminado(List<DetalleRequisito> detalles, TipoRequisito tipo,
+                                          BigDecimal req, EstadoIndicador estado) {
+        if (estado == null || estado == EstadoIndicador.CALCULABLE) return false;
+        switch (estado) {
+            case INDETERMINADO_FAVORABLE -> detalles.add(new DetalleRequisito(tipo, req, null, true,
+                "CUMPLE: indicador no aplica (N.A.), se entiende cumplido por no tener denominador."));
+            case INDETERMINADO_A_VERIFICAR -> detalles.add(new DetalleRequisito(tipo, req, null, false,
+                EstadoRequisito.REQUIERE_VERIFICACION,
+                "REQUIERE VERIFICACIÓN: indicador indeterminado (denominador cero); no se puede afirmar cumplimiento."));
+            case DATO_FALTANTE -> detalles.add(new DetalleRequisito(tipo, req, null, false,
+                EstadoRequisito.REQUIERE_VERIFICACION,
+                "REQUIERE VERIFICACIÓN: falta un dato para calcular el indicador."));
+            default -> { return false; }
+        }
+        return true;
+    }
+
+    /**
+     * Promedio ponderado de un ratio financiero entre los integrantes, replicando en la ruta
+     * plural la semántica que {@link #resolverIndeterminado} aplica en la individual:
+     *
+     * <ul>
+     *   <li><b>A_VERIFICAR / DATO_FALTANTE</b> en cualquier integrante con peso → el requisito
+     *       del consorcio queda "REQUIERE VERIFICACIÓN" (no se declara CUMPLE automáticamente).</li>
+     *   <li><b>INDETERMINADO_FAVORABLE</b> → se EXCLUYE del promedio; las participaciones de los
+     *       integrantes restantes (con dato numérico) se RENORMALIZAN dividiendo por su suma.</li>
+     *   <li>Si TODOS los integrantes con peso quedan excluidos por favorables (nadie aporta dato
+     *       numérico) → el requisito hereda el estado favorable (CUMPLE), como en el individual.</li>
+     * </ul>
+     *
+     * Nota: cuando ningún integrante es indeterminado, la suma de participaciones es 1 y el
+     * resultado coincide con la ponderación previa (retrocompatible).
+     */
+    private void evaluarRatioPonderado(List<DetalleRequisito> detalles, TipoRequisito tipo, BigDecimal reqVal,
                                        List<IntegranteEvaluacion> integrantes,
                                        Function<IndicadoresFinancieros, BigDecimal> extractor,
+                                       Function<IndicadoresFinancieros, EstadoIndicador> estadoExtractor,
                                        boolean esMayorIgual) {
         if (reqVal == null) return;
-        BigDecimal req = BigDecimal.valueOf(reqVal);
-        BigDecimal actual = ponderar(integrantes, extractor).setScale(ESCALA_RATIO, RoundingMode.HALF_UP);
+        BigDecimal req = reqVal;
+
+        BigDecimal numerador = BigDecimal.ZERO;     // Σ valorᵢ × participaciónᵢ (solo numéricos)
+        BigDecimal pesoNumerico = BigDecimal.ZERO;  // Σ participaciónᵢ (solo numéricos) → divisor de renormalización
+        for (IntegranteEvaluacion ie : integrantes) {
+            IndicadoresFinancieros ind = ie.empresa().getIndicadores();
+            EstadoIndicador estado = estadoExtractor.apply(ind);
+            if (estado == EstadoIndicador.INDETERMINADO_A_VERIFICAR || estado == EstadoIndicador.DATO_FALTANTE) {
+                detalles.add(new DetalleRequisito(tipo, req, null, false,
+                    EstadoRequisito.REQUIERE_VERIFICACION,
+                    "REQUIERE VERIFICACIÓN: un integrante tiene el indicador indeterminado; no se puede afirmar cumplimiento."));
+                return;
+            }
+            if (estado == EstadoIndicador.INDETERMINADO_FAVORABLE) {
+                continue; // se excluye del promedio; se renormaliza con los restantes
+            }
+            BigDecimal valor = extractor.apply(ind);
+            BigDecimal safe = valor != null ? valor : BigDecimal.ZERO;
+            numerador = numerador.add(safe.multiply(ie.porcentaje()));
+            pesoNumerico = pesoNumerico.add(ie.porcentaje());
+        }
+
+        if (pesoNumerico.signum() == 0) {
+            // Todos los integrantes con peso son favorables: el ratio no aplica (N.A.) → cumple.
+            detalles.add(new DetalleRequisito(tipo, req, null, true,
+                "CUMPLE: indicador no aplica (N.A.) para todos los integrantes."));
+            return;
+        }
+
+        BigDecimal actual = numerador.divide(pesoNumerico, ESCALA_RATIO, RoundingMode.HALF_UP);
         boolean cumple = esMayorIgual ? actual.compareTo(req) >= 0 : actual.compareTo(req) <= 0;
         String mensaje = cumple
                 ? "CUMPLE"
                 : esMayorIgual ? "NO CUMPLE: Menor al requerido (" + req + ")"
                                : "NO CUMPLE: Supera el máximo (" + req + ")";
-        detalles.add(new DetalleRequisito(nombre, req, actual, cumple, mensaje));
+        detalles.add(new DetalleRequisito(tipo, req, actual, cumple, mensaje));
     }
 
-    private void evaluarMagnitudPonderada(List<DetalleRequisito> detalles, String nombre, Double reqVal,
+    private void evaluarMagnitudPonderada(List<DetalleRequisito> detalles, TipoRequisito tipo, BigDecimal reqVal,
                                           List<IntegranteEvaluacion> integrantes,
                                           Function<IndicadoresFinancieros, BigDecimal> extractor) {
         if (reqVal == null) return;
-        BigDecimal req = BigDecimal.valueOf(reqVal);
+        BigDecimal req = reqVal;
         BigDecimal actual = ponderar(integrantes, extractor).setScale(ESCALA_MONEDA, RoundingMode.HALF_UP);
         boolean cumple = actual.compareTo(req) >= 0;
-        detalles.add(new DetalleRequisito(nombre, req, actual, cumple,
+        detalles.add(new DetalleRequisito(tipo, req, actual, cumple,
             cumple ? "CUMPLE" : "NO CUMPLE: Menor al requerido (" + req + ")"));
     }
 
@@ -215,19 +307,41 @@ public class AnalizadorCumplimientoService {
         return acumulado;
     }
 
-    private boolean esMipymeOMujer(Empresa empresa) {
-        String tamano = empresa.getTamanoEmpresa() != null ? empresa.getTamanoEmpresa().toLowerCase() : "";
-        return tamano.contains("micro") || tamano.contains("pequeña") || tamano.contains("mediana")
-                || tamano.contains("mipyme") || tamano.contains("mujer");
+    /**
+     * Mensaje del detalle de experiencia. Conserva el token CUMPLE/NO CUMPLE (el estado real
+     * lo lleva el flag {@code cumple} del {@link DetalleRequisito}) y anexa la advertencia de
+     * que la verificación es solo por monto agregado SMMLV.
+     */
+    private static String mensajeExperiencia(boolean cumple) {
+        return (cumple ? "CUMPLE." : "NO CUMPLE.") + NOTA_EXPERIENCIA_ESPECIFICA;
     }
 
+    /**
+     * Beneficio de ampliación del límite de contratos de experiencia (+2). Se activa por
+     * cualquiera de las dos condiciones: proponente MiPyme o proponente mujer. Antes se
+     * derivaba de un parseo de subcadenas sobre {@code tamanoEmpresa}; ahora se leen los
+     * flags explícitos de la empresa. La semántica (a qué afecta y qué lo dispara) no cambia.
+     */
+    private boolean esMipymeOMujer(Empresa empresa) {
+        return empresa.isMipyme() || empresa.isProponenteMujer();
+    }
+
+    /**
+     * K residual vigente del proponente: la CRP con resultado calculado más reciente por
+     * {@code fechaCalculo}. Los registros sin fecha (previos a la migración) pierden ante los
+     * fechados (nullsFirst) y se desempata por id para determinismo total. Sin CRP con K → ZERO.
+     */
     private BigDecimal obtenerUltimaK(Empresa empresa) {
         if (empresa.getCapacidadesResiduales() == null || empresa.getCapacidadesResiduales().isEmpty()) {
             return BigDecimal.ZERO;
         }
         return empresa.getCapacidadesResiduales().stream()
                 .filter(c -> c.getResultadoK() != null)
-                .reduce((first, second) -> second)
+                .max(Comparator
+                        .comparing(CapacidadResidualProponente::getFechaCalculo,
+                                Comparator.nullsFirst(Comparator.naturalOrder()))
+                        .thenComparing(CapacidadResidualProponente::getId,
+                                Comparator.nullsFirst(Comparator.naturalOrder())))
                 .map(CapacidadResidualProponente::getResultadoK)
                 .orElse(BigDecimal.ZERO);
     }

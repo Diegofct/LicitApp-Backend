@@ -19,6 +19,7 @@ public final class ConsorcioRequestMapper {
 
         ConformacionConsorcio c = ConformacionConsorcio.builder()
                 .cuadroDeObraId(dto.getCuadroDeObraId())
+                .nombre(dto.getNombre() != null ? dto.getNombre().trim() : null)
                 .tipoParticipacion(dto.getTipoParticipacion())
                 .observaciones(dto.getObservaciones())
                 .build();
@@ -45,6 +46,7 @@ public final class ConsorcioRequestMapper {
         return ConsorcioResponseDTO.builder()
                 .id(c.getId())
                 .cuadroDeObraId(c.getCuadroDeObraId())
+                .nombre(c.getNombre())
                 .tipoParticipacion(c.getTipoParticipacion())
                 .fechaConformacion(c.getFechaConformacion())
                 .observaciones(c.getObservaciones())

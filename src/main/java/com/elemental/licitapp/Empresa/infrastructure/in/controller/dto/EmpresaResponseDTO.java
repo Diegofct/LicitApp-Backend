@@ -22,6 +22,8 @@ public class EmpresaResponseDTO {
     private String correo;
     private String numeroProponenteCcb;
     private String tamanoEmpresa;
+    private boolean mipyme;
+    private boolean proponenteMujer;
     private String representanteLegal;
     private String identificacionRepresentanteLegal;
     private LocalDate fechaInscripcion;

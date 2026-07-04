@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,6 +38,7 @@ public class EmpresaService implements EmpresaUseCase, ConsultarEmpresasUseCase 
             empresa.getCapacidadesResiduales().forEach(cap -> {
                 cap.setEmpresa(empresa);
                 cap.recalcular();
+                cap.setFechaCalculo(LocalDateTime.now());
             });
         }
         return empresaRepositoryPort.guardar(empresa);
@@ -90,6 +92,8 @@ public class EmpresaService implements EmpresaUseCase, ConsultarEmpresasUseCase 
         empresaExistente.setTelefono(empresaActualizada.getTelefono());
         empresaExistente.setCorreo(empresaActualizada.getCorreo());
         empresaExistente.setTamanoEmpresa(empresaActualizada.getTamanoEmpresa());
+        empresaExistente.setMipyme(empresaActualizada.isMipyme());
+        empresaExistente.setProponenteMujer(empresaActualizada.isProponenteMujer());
         empresaExistente.setRepresentanteLegal(empresaActualizada.getRepresentanteLegal());
 
         if (empresaActualizada.getIndicadores() != null) {
@@ -126,6 +130,7 @@ public class EmpresaService implements EmpresaUseCase, ConsultarEmpresasUseCase 
                     .forEach(cap -> {
                         cap.setEmpresa(empresaExistente);
                         cap.recalcular();
+                        cap.setFechaCalculo(LocalDateTime.now());
                         empresaExistente.getCapacidadesResiduales().add(cap);
                     });
         }
@@ -147,6 +152,7 @@ public class EmpresaService implements EmpresaUseCase, ConsultarEmpresasUseCase 
 
         capacidad.setEmpresa(empresa);
         capacidad.recalcular();
+        capacidad.setFechaCalculo(LocalDateTime.now());
 
         if (capacidad.getId() != null) {
             empresa.getCapacidadesResiduales().removeIf(c -> c.getId().equals(capacidad.getId()));

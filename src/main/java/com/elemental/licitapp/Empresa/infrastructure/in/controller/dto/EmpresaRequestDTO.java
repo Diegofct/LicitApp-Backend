@@ -32,6 +32,12 @@ public class EmpresaRequestDTO {
 
     private String numeroProponenteCcb;
     private String tamanoEmpresa;
+
+    // Flags de negocio: MiPyme (tamaño) y proponente mujer (condición). Separados del
+    // texto libre tamanoEmpresa, que se conserva solo como dato descriptivo.
+    private boolean mipyme;
+    private boolean proponenteMujer;
+
     private String representanteLegal;
     private String identificacionRepresentanteLegal;
 

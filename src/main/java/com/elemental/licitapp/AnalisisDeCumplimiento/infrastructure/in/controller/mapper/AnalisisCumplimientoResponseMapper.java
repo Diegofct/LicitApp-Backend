@@ -29,7 +29,7 @@ public final class AnalisisCumplimientoResponseMapper {
     private static List<DetalleRequisitoDTO> toDetallesDTO(List<DetalleRequisito> detalles) {
         if (detalles == null) return List.of();
         return detalles.stream()
-            .map(d -> new DetalleRequisitoDTO(d.nombre(), d.valorRequerido(), d.valorActual(), d.cumple(), d.mensaje()))
+            .map(d -> new DetalleRequisitoDTO(d.nombre(), d.valorRequerido(), d.valorActual(), d.cumple(), d.estado().name(), d.mensaje()))
             .toList();
     }
 

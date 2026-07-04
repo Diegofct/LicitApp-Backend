@@ -14,5 +14,7 @@ public class DetalleRequisitoDTO {
     private BigDecimal valorRequerido;
     private BigDecimal valorObtenido;
     private boolean cumple;
+    /** Estado explícito del requisito: CUMPLE | NO_CUMPLE | REQUIERE_VERIFICACION. */
+    private String estado;
     private String observacion;
 }

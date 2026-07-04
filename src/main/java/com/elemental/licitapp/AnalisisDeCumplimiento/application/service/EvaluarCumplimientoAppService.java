@@ -11,6 +11,7 @@ import com.elemental.licitapp.Empresa.domain.entity.Empresa;
 import com.elemental.licitapp.Exception.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -39,6 +40,7 @@ public class EvaluarCumplimientoAppService implements EvaluarCumplimientoUseCase
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ResultadoEvaluacion evaluar(Long empresaId, Long cuadroId, TipoParticipacion tipo,
                                        BigDecimal porcentajeSimulacion) {
         Empresa empresa = obtenerEmpresasPort.obtenerPorId(empresaId)

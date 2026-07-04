@@ -5,3 +5,5 @@
 - [Módulo SeguimientoProceso](seguimiento_proceso.md) — ciclo de vida post-presentación, eventos manuales, auto-init al pasar a PRESENTADO
 - [Decisión Resultados solo lectura](decision_resultados_lectura_pura.md) — slice Resultados agrega sobre CuadroDeObra; motivo no-adjudicación va en `observacion`, no se agrega campo
 - [Módulo Resultados](modulo_resultados.md) — slice creado 2026-05-26; endpoints `/resultados/resumen` y `/resultados/historial`, tasa de éxito en porcentaje, sin tabla propia
+- [Convención decimal monetario](decimal_monetario_convencion.md) — COP=BigDecimal(20,2), ratios=(20,4); valorSMMLV y poeAnticipo quedan Double a propósito
+- [Refuerzos AnalisisDeCumplimiento](refuerzos_analisis_cumplimiento.md) — backlog jun-jul 2026 COMPLETADO; C1/C2/C3/C4/C5/C7 hechos, C6 cerrado sin cambios

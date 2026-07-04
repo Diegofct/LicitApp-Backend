@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -20,15 +22,15 @@ public class RequisitoLicitacionResponseDTO {
     private Integer contrato;
     private Integer n;
 
-    private Double presupuesto;
-    private Double patrimonio;
-    private Double capitalTrabajo;
-    private Double liquidez;
-    private Double endeudamiento;
-    private Double razonCoberturaInteres;
-    private Double rentabilidadPatrimonio;
-    private Double rentabilidadActivo;
+    private BigDecimal presupuesto;
+    private BigDecimal patrimonio;
+    private BigDecimal capitalTrabajo;
+    private BigDecimal liquidez;
+    private BigDecimal endeudamiento;
+    private BigDecimal razonCoberturaInteres;
+    private BigDecimal rentabilidadPatrimonio;
+    private BigDecimal rentabilidadActivo;
 
-    private Double kResidualProceso;
+    private BigDecimal kResidualProceso;
     private Double poeAnticipo;
 }
