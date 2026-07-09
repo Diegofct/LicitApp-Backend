@@ -75,9 +75,9 @@ public class SecopApiAdapter implements SecopApiPort {
     }
 
     @Override
-    public Page<Licitacion> obtenerLicitacionesObraPublica(Pageable pageable) {
+    public Page<Licitacion> obtenerLicitacionesObraPublica(Pageable pageable, String entidad) {
         int offset = pageable.getPageNumber() * pageable.getPageSize();
-        String whereClause = buildWhereClause();
+        String whereClause = buildWhereClause(entidad);
 
         List<Licitacion> licitaciones = fetchPage(whereClause, pageable.getPageSize(), offset);
         long totalElements = fetchCount(whereClause);
@@ -85,14 +85,24 @@ public class SecopApiAdapter implements SecopApiPort {
         return new PageImpl<>(licitaciones, pageable, totalElements);
     }
 
-    private String buildWhereClause() {
+    private String buildWhereClause(String entidad) {
         LocalDate oneYearAgo = LocalDate.now().minusYears(1);
         String oneYearAgoFormatted = oneYearAgo.format(DateTimeFormatter.ISO_LOCAL_DATE);
-        return String.format(
+        StringBuilder where = new StringBuilder(String.format(
                 "estado_del_procedimiento = 'Publicado' "
                         + "AND modalidad_de_contratacion = '%s' "
                         + "AND %s >= '%sT00:00:00.000'",
-                MODALIDAD_OBRA_PUBLICA, FECHA_FIELD, oneYearAgoFormatted);
+                MODALIDAD_OBRA_PUBLICA, FECHA_FIELD, oneYearAgoFormatted));
+
+        // Filtro opcional por entidad (RF4): coincidencia parcial e insensible a
+        // mayúsculas/minúsculas. Se escapan las comillas simples (SoQL las duplica)
+        // para evitar inyección en la cláusula $where.
+        if (entidad != null && !entidad.isBlank()) {
+            String sanitized = entidad.trim().replace("'", "''");
+            where.append(String.format(" AND upper(entidad) like upper('%%%s%%')", sanitized));
+        }
+
+        return where.toString();
     }
 
     private List<Licitacion> fetchPage(String whereClause, int limit, int offset) {

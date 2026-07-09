@@ -10,15 +10,19 @@ import com.elemental.licitapp.CuadroDeObra.application.ports.out.RequisitoLicita
 import com.elemental.licitapp.CuadroDeObra.domain.entity.CuadroDeObra;
 import com.elemental.licitapp.CuadroDeObra.domain.entity.RequisitoLicitacion;
 import com.elemental.licitapp.CuadroDeObra.domain.enums.CuadroDeObraEstado;
+import com.elemental.licitapp.CuadroDeObra.domain.projection.CuadroDeObraRef;
+import com.elemental.licitapp.Exception.ProcesoYaRegistradoException;
 import com.elemental.licitapp.Exception.ResourceNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class CuadroDeObraService implements CuadroDeObraUseCase, ConsultarRequisitosUseCase, ConsultarCuadrosUseCase {
@@ -71,6 +75,12 @@ public class CuadroDeObraService implements CuadroDeObraUseCase, ConsultarRequis
 
     @Override
     @Transactional(readOnly = true)
+    public Set<Long> cuadrosConRequisitos(Collection<Long> ids) {
+        return requisitoRepositoryPort.idsConRequisitos(ids);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Map<CuadroDeObraEstado, Long> contarPorEstado() {
         return cuadroDeObraRepositoryPort.contarPorEstado();
     }
@@ -102,8 +112,22 @@ public class CuadroDeObraService implements CuadroDeObraUseCase, ConsultarRequis
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<CuadroDeObraRef> obtenerReferencias() {
+        return cuadroDeObraRepositoryPort.obtenerReferencias();
+    }
+
+    @Override
     @Transactional
     public CuadroDeObra createCuadro (CuadroDeObra nuevoCuadro){
+        // Evita agregar dos veces la misma licitación al Cuadro de Obra (cruce por numeroProceso).
+        // Si el cuadro se crea sin número de proceso, no aplica la restricción de unicidad.
+        String numeroProceso = nuevoCuadro.getNumeroProceso();
+        if (numeroProceso != null && !numeroProceso.isBlank()
+                && cuadroDeObraRepositoryPort.existePorNumeroProceso(numeroProceso)) {
+            throw new ProcesoYaRegistradoException(
+                    "Ya existe un cuadro de obra para el proceso " + numeroProceso);
+        }
         nuevoCuadro.setCuadroDeObraEstado(CuadroDeObraEstado.POR_PRESENTAR);
         return cuadroDeObraRepositoryPort.save(nuevoCuadro);
     }

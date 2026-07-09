@@ -3,6 +3,7 @@ package com.elemental.licitapp.CuadroDeObra.infrastructure.out.repository;
 import com.elemental.licitapp.CuadroDeObra.application.ports.out.CuadroDeObraRepositoryPort;
 import com.elemental.licitapp.CuadroDeObra.domain.entity.CuadroDeObra;
 import com.elemental.licitapp.CuadroDeObra.domain.enums.CuadroDeObraEstado;
+import com.elemental.licitapp.CuadroDeObra.domain.projection.CuadroDeObraRef;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
@@ -46,6 +47,16 @@ public class CuadroDeObraRepositoryAdapter implements CuadroDeObraRepositoryPort
             conteo.put((CuadroDeObraEstado) fila[0], (Long) fila[1]);
         }
         return conteo;
+    }
+
+    @Override
+    public List<CuadroDeObraRef> obtenerReferencias() {
+        return jpaRepository.obtenerReferencias();
+    }
+
+    @Override
+    public boolean existePorNumeroProceso(String numeroProceso) {
+        return jpaRepository.existsByNumeroProceso(numeroProceso);
     }
 
     @Override

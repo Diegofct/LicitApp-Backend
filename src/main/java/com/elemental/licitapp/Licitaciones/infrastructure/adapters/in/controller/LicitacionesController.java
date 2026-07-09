@@ -8,6 +8,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -24,11 +25,12 @@ public class LicitacionesController {
 
     @GetMapping("/obra-publica")
     public ResponseEntity<Page<Licitacion>> obtenerLicitacionesObraPublica(
-            @PageableDefault(size = 10) Pageable pageable) {
+            @PageableDefault(size = 10) Pageable pageable,
+            @RequestParam(required = false) String entidad) {
         if (pageable.getPageSize() > MAX_PAGE_SIZE) {
             throw new IllegalArgumentException(
                     "El tamaño de página no puede exceder " + MAX_PAGE_SIZE + " (límite de la API SECOP).");
         }
-        return ResponseEntity.ok(licitacionesService.obtenerLicitacionesObraPublica(pageable));
+        return ResponseEntity.ok(licitacionesService.obtenerLicitacionesObraPublica(pageable, entidad));
     }
 }

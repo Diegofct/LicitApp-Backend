@@ -2,6 +2,7 @@ package com.elemental.licitapp.CuadroDeObra.application.ports.out;
 
 import com.elemental.licitapp.CuadroDeObra.domain.entity.CuadroDeObra;
 import com.elemental.licitapp.CuadroDeObra.domain.enums.CuadroDeObraEstado;
+import com.elemental.licitapp.CuadroDeObra.domain.projection.CuadroDeObraRef;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -15,6 +16,8 @@ public interface CuadroDeObraRepositoryPort {
     Optional<CuadroDeObra> findById(Long id);
     Page<CuadroDeObra> findByCuadroDeObraEstadoIn(List<CuadroDeObraEstado> estados, Pageable pageable);
     Map<CuadroDeObraEstado, Long> contarPorEstado();
+    List<CuadroDeObraRef> obtenerReferencias();
+    boolean existePorNumeroProceso(String numeroProceso);
     void delete(Long id);
 
 }

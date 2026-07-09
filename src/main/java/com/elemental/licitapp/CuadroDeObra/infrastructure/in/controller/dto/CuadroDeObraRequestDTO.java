@@ -45,9 +45,11 @@ public class CuadroDeObraRequestDTO {
 
     private String experiencia;
 
-    private String plazo;
+    @PositiveOrZero(message = "plazo no puede ser negativo")
+    private Integer plazo;
 
-    private String anticipo;
+    @PositiveOrZero(message = "anticipo no puede ser negativo")
+    private Integer anticipo;
 
     private String observacion;
 

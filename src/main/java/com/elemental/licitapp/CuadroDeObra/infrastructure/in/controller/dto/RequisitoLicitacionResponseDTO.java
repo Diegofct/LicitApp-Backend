@@ -20,7 +20,7 @@ public class RequisitoLicitacionResponseDTO {
     private String especifica2;
     private String secundaria;
     private Integer contrato;
-    private Integer n;
+    private Integer plazo;
 
     private BigDecimal presupuesto;
     private BigDecimal patrimonio;

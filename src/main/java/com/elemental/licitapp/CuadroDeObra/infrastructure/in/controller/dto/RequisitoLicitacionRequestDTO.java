@@ -22,8 +22,8 @@ public class RequisitoLicitacionRequestDTO {
     @PositiveOrZero(message = "contrato no puede ser negativo")
     private Integer contrato;
 
-    @PositiveOrZero(message = "n no puede ser negativo")
-    private Integer n;
+    @PositiveOrZero(message = "plazo no puede ser negativo")
+    private Integer plazo;
 
     @PositiveOrZero(message = "presupuesto no puede ser negativo")
     private BigDecimal presupuesto;

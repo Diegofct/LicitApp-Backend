@@ -15,7 +15,7 @@ public class LicitacionesService {
         this.secopApiPort = secopApiPort;
     }
 
-    public Page<Licitacion> obtenerLicitacionesObraPublica(Pageable pageable) {
-        return secopApiPort.obtenerLicitacionesObraPublica(pageable);
+    public Page<Licitacion> obtenerLicitacionesObraPublica(Pageable pageable, String entidad) {
+        return secopApiPort.obtenerLicitacionesObraPublica(pageable, entidad);
     }
 }

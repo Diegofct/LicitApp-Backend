@@ -5,5 +5,5 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 public interface SecopApiPort {
-    Page<Licitacion> obtenerLicitacionesObraPublica(Pageable pageable);
+    Page<Licitacion> obtenerLicitacionesObraPublica(Pageable pageable, String entidad);
 }
