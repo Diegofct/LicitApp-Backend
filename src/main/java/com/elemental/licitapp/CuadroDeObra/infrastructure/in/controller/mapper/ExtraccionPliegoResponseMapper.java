@@ -25,7 +25,6 @@ public final class ExtraccionPliegoResponseMapper {
                 .especifica2(d.especifica2())
                 .secundaria(d.secundaria())
                 .contrato(d.contrato())
-                .n(d.n())
                 .presupuesto(aDecimal(d.presupuesto()))
                 .patrimonio(aDecimal(d.patrimonio()))
                 .capitalTrabajo(aDecimal(d.capitalTrabajo()))

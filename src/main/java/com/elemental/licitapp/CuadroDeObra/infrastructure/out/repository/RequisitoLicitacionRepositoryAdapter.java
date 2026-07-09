@@ -3,7 +3,10 @@ package com.elemental.licitapp.CuadroDeObra.infrastructure.out.repository;
 import com.elemental.licitapp.CuadroDeObra.application.ports.out.RequisitoLicitacionRepositoryPort;
 import com.elemental.licitapp.CuadroDeObra.domain.entity.RequisitoLicitacion;
 import org.springframework.stereotype.Component;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 
 @Component
 public class RequisitoLicitacionRepositoryAdapter implements RequisitoLicitacionRepositoryPort {
@@ -27,5 +30,11 @@ public class RequisitoLicitacionRepositoryAdapter implements RequisitoLicitacion
     @Override
     public void deleteByCuadroDeObraId(Long cuadroDeObraId) {
         repository.deleteByCuadroDeObraId(cuadroDeObraId);
+    }
+
+    @Override
+    public Set<Long> idsConRequisitos(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) return Set.of();
+        return new HashSet<>(repository.findCuadroIdsWithRequisitos(ids));
     }
 }

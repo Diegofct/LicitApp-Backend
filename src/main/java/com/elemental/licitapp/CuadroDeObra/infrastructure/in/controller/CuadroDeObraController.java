@@ -1,9 +1,12 @@
 package com.elemental.licitapp.CuadroDeObra.infrastructure.in.controller;
 
+import com.elemental.licitapp.CuadroDeObra.application.ports.in.ConsultarRequisitosUseCase;
 import com.elemental.licitapp.CuadroDeObra.application.ports.in.CuadroDeObraUseCase;
 import com.elemental.licitapp.CuadroDeObra.application.ports.in.ExtraerPliegoUseCase;
+import com.elemental.licitapp.CuadroDeObra.domain.entity.CuadroDeObra;
 import com.elemental.licitapp.CuadroDeObra.domain.entity.RequisitoLicitacion;
 import com.elemental.licitapp.CuadroDeObra.infrastructure.in.controller.dto.ActualizarEstadoRequestDTO;
+import com.elemental.licitapp.CuadroDeObra.infrastructure.in.controller.dto.CuadroDeObraRefDTO;
 import com.elemental.licitapp.CuadroDeObra.infrastructure.in.controller.dto.CuadroDeObraRequestDTO;
 import com.elemental.licitapp.CuadroDeObra.infrastructure.in.controller.dto.CuadroDeObraResponseDTO;
 import com.elemental.licitapp.CuadroDeObra.infrastructure.in.controller.dto.ExtraccionPliegoResponseDTO;
@@ -22,6 +25,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("cuadro-de-obra")
@@ -29,11 +34,14 @@ public class CuadroDeObraController {
 
     private final CuadroDeObraUseCase cuadroDeObraUseCase;
     private final ExtraerPliegoUseCase extraerPliegoUseCase;
+    private final ConsultarRequisitosUseCase consultarRequisitosUseCase;
 
     public CuadroDeObraController(CuadroDeObraUseCase cuadroDeObraUseCase,
-                                  ExtraerPliegoUseCase extraerPliegoUseCase) {
+                                  ExtraerPliegoUseCase extraerPliegoUseCase,
+                                  ConsultarRequisitosUseCase consultarRequisitosUseCase) {
         this.cuadroDeObraUseCase = cuadroDeObraUseCase;
         this.extraerPliegoUseCase = extraerPliegoUseCase;
+        this.consultarRequisitosUseCase = consultarRequisitosUseCase;
     }
 
     /**
@@ -83,9 +91,26 @@ public class CuadroDeObraController {
 
     @GetMapping
     public ResponseEntity<Page<CuadroDeObraResponseDTO>> getCuadrosPorVista(@RequestParam(defaultValue = "por-presentar") String vista, Pageable pageable) {
-        Page<CuadroDeObraResponseDTO> page = cuadroDeObraUseCase.findCuadrosPorVistas(vista, pageable)
-                .map(CuadroDeObraRequestMapper::toResponseDTO);
-        return ResponseEntity.ok(page);
+        Page<CuadroDeObra> page = cuadroDeObraUseCase.findCuadrosPorVistas(vista, pageable);
+        // (RF3) resolvemos en lote qué procesos ya tienen requisitos para evitar N+1.
+        List<Long> ids = page.getContent().stream().map(CuadroDeObra::getId).toList();
+        Set<Long> conRequisitos = consultarRequisitosUseCase.cuadrosConRequisitos(ids);
+        Page<CuadroDeObraResponseDTO> dto = page.map(
+                c -> CuadroDeObraRequestMapper.toResponseDTO(c, conRequisitos.contains(c.getId())));
+        return ResponseEntity.ok(dto);
+    }
+
+    /**
+     * Referencias (id + numeroProceso) de los cuadros ya guardados. El frontend las cruza
+     * contra las licitaciones de SECOP II para resaltar las filas ya agregadas y abrir el
+     * registro existente en modo solo lectura, evitando duplicados.
+     */
+    @GetMapping("/refs")
+    public ResponseEntity<List<CuadroDeObraRefDTO>> getReferencias() {
+        List<CuadroDeObraRefDTO> refs = cuadroDeObraUseCase.obtenerReferencias().stream()
+                .map(CuadroDeObraRequestMapper::toRefDTO)
+                .toList();
+        return ResponseEntity.ok(refs);
     }
 
     @GetMapping("/{id}")

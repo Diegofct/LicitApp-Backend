@@ -57,10 +57,10 @@ public class CuadroDeObra {
     private String experiencia;
 
     @Column(name = "plazo")
-    private String plazo;
+    private Integer plazo;
 
     @Column(name = "anticipo")
-    private String anticipo;
+    private Integer anticipo;
 
     @Lob
     @Column(name = "observacion", columnDefinition = "TEXT")

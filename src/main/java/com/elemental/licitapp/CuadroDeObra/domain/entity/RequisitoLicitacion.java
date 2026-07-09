@@ -38,8 +38,8 @@ public class RequisitoLicitacion {
     @Column(name = "num_contrato")
     private Integer contrato; // Cantidad de contratos permitidos
 
-    @Column(name = "n_meses")
-    private Integer n;
+    @Column(name = "plazo_meses")
+    private Integer plazo; // Plazo del proceso en meses (RF5, precargado desde el Cuadro de Obra)
 
     // --- INDICADORES FINANCIEROS REQUERIDOS ---
     // Montos en COP: scale 2, precision 20 (paridad con IndicadoresFinancieros).
@@ -89,7 +89,7 @@ public class RequisitoLicitacion {
         if (parche.especifica2 != null) this.especifica2 = parche.especifica2;
         if (parche.secundaria != null) this.secundaria = parche.secundaria;
         if (parche.contrato != null) this.contrato = parche.contrato;
-        if (parche.n != null) this.n = parche.n;
+        if (parche.plazo != null) this.plazo = parche.plazo;
         if (parche.presupuesto != null) this.presupuesto = parche.presupuesto;
         if (parche.patrimonio != null) this.patrimonio = parche.patrimonio;
         if (parche.capitalTrabajo != null) this.capitalTrabajo = parche.capitalTrabajo;

@@ -32,8 +32,11 @@ public class CuadroDeObraResponseDTO {
     private String departamento;
     private String municipio;
     private String experiencia;
-    private String plazo;
-    private String anticipo;
+    private Integer plazo;
+    private Integer anticipo;
     private String observacion;
     private CuadroDeObraEstado cuadroDeObraEstado;
+
+    /** (RF3) true si el proceso ya tiene requisitos de licitación guardados. */
+    private boolean tieneRequisitos;
 }

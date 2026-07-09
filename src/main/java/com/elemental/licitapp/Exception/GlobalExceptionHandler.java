@@ -50,6 +50,11 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, ex.getMessage());
     }
 
+    @ExceptionHandler(ProcesoYaRegistradoException.class)
+    public ResponseEntity<Map<String, Object>> handleProcesoYaRegistrado(ProcesoYaRegistradoException ex) {
+        return build(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
     @ExceptionHandler(SecopApiException.class)
     public ResponseEntity<Map<String, Object>> handleSecopApi(SecopApiException ex) {
         log.error("Fallo al consultar la API de SECOP", ex);
