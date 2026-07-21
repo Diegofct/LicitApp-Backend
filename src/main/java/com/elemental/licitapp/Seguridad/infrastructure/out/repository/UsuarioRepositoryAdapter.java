@@ -23,8 +23,18 @@ public class UsuarioRepositoryAdapter implements UsuarioRepositoryPort {
     }
 
     @Override
+    public Optional<Usuario> buscarPorId(Long id) {
+        return usuarioJpaRepository.findById(id);
+    }
+
+    @Override
     public Optional<Usuario> buscarPorCorreo(String correo) {
         return usuarioJpaRepository.findByCorreo(correo);
+    }
+
+    @Override
+    public long contarAdminsActivos() {
+        return usuarioJpaRepository.countByRolAndActivoTrue(Rol.ADMIN);
     }
 
     @Override

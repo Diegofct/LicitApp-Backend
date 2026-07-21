@@ -15,7 +15,7 @@ public final class CuadroDeObraRequestMapper {
 
     public static CuadroDeObraRefDTO toRefDTO(CuadroDeObraRef ref) {
         if (ref == null) return null;
-        return new CuadroDeObraRefDTO(ref.id(), ref.numeroProceso());
+        return new CuadroDeObraRefDTO(ref.id(), ref.numeroProceso(), ref.idDelProceso());
     }
 
     public static CuadroDeObra toEntity(CuadroDeObraRequestDTO dto) {
@@ -23,6 +23,7 @@ public final class CuadroDeObraRequestMapper {
         CuadroDeObra c = new CuadroDeObra();
         c.setEntidadContratante(dto.getEntidadContratante());
         c.setNumeroProceso(dto.getNumeroProceso());
+        c.setIdDelProceso(dto.getIdDelProceso());
         c.setDescripcionObjeto(dto.getDescripcionObjeto());
         c.setEstadoProceso(dto.getEstadoProceso());
         c.setFechaPublicacion(dto.getFechaPublicacion());
@@ -77,6 +78,7 @@ public final class CuadroDeObraRequestMapper {
                 .id(c.getId())
                 .entidadContratante(c.getEntidadContratante())
                 .numeroProceso(c.getNumeroProceso())
+                .idDelProceso(c.getIdDelProceso())
                 .descripcionObjeto(c.getDescripcionObjeto())
                 .estadoProceso(c.getEstadoProceso())
                 .fechaPublicacion(c.getFechaPublicacion())
@@ -91,6 +93,7 @@ public final class CuadroDeObraRequestMapper {
                 .anticipo(c.getAnticipo())
                 .observacion(c.getObservacion())
                 .cuadroDeObraEstado(c.getCuadroDeObraEstado())
+                .presentacion(c.getPresentacion())
                 .build();
     }
 

@@ -22,6 +22,7 @@ public class JwtProveedorTokenAdapter implements ProveedorTokenPort {
 
     private static final Logger log = LoggerFactory.getLogger(JwtProveedorTokenAdapter.class);
     private static final String CLAIM_ROL = "rol";
+    private static final String CLAIM_UID = "uid";
 
     private final SecretKey clave;
     private final long expiracionMs;
@@ -40,6 +41,7 @@ public class JwtProveedorTokenAdapter implements ProveedorTokenPort {
         return Jwts.builder()
                 .subject(usuario.getCorreo())
                 .claim(CLAIM_ROL, usuario.getRol().name())
+                .claim(CLAIM_UID, usuario.getId())
                 .issuedAt(Date.from(ahora))
                 .expiration(Date.from(ahora.plusMillis(expiracionMs)))
                 .signWith(clave)
@@ -59,10 +61,23 @@ public class JwtProveedorTokenAdapter implements ProveedorTokenPort {
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
-            return Optional.of(new DatosToken(claims.getSubject(), claims.get(CLAIM_ROL, String.class)));
+            return Optional.of(new DatosToken(
+                    extraerUid(claims),
+                    claims.getSubject(),
+                    claims.get(CLAIM_ROL, String.class)));
         } catch (JwtException | IllegalArgumentException ex) {
             log.debug("Token JWT invalido: {}", ex.getMessage());
             return Optional.empty();
         }
+    }
+
+    /**
+     * Lee el claim uid como Number en vez de Long: el JSON del token deserializa los
+     * enteros pequenos como Integer, y pedir Long directamente falla. Devuelve null
+     * en tokens emitidos antes de que existiera el claim (siguen siendo validos).
+     */
+    private Long extraerUid(Claims claims) {
+        Number uid = claims.get(CLAIM_UID, Number.class);
+        return uid == null ? null : uid.longValue();
     }
 }

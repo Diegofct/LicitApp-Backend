@@ -17,12 +17,15 @@ public interface CuadroDeObraJpaRepository extends JpaRepository<CuadroDeObra, L
     List<Object[]> contarAgrupadoPorEstado();
 
     /**
-     * Referencias livianas (id + numeroProceso) de los cuadros que tienen número
-     * de proceso registrado, para el cruce contra las licitaciones de SECOP II.
+     * Referencias livianas (id + numeroProceso + idDelProceso) de los cuadros que tienen
+     * número de proceso registrado, para el cruce contra las licitaciones de SECOP II.
+     * El cruce se hace por {@code idDelProceso}, que puede venir NULL en los cuadros
+     * cargados a mano.
      */
-    @Query("select new com.elemental.licitapp.CuadroDeObra.domain.projection.CuadroDeObraRef(c.id, c.numeroProceso) "
+    @Query("select new com.elemental.licitapp.CuadroDeObra.domain.projection.CuadroDeObraRef("
+            + "c.id, c.numeroProceso, c.idDelProceso) "
             + "from CuadroDeObra c where c.numeroProceso is not null and c.numeroProceso <> ''")
     List<CuadroDeObraRef> obtenerReferencias();
 
-    boolean existsByNumeroProceso(String numeroProceso);
+    boolean existsByIdDelProceso(String idDelProceso);
 }

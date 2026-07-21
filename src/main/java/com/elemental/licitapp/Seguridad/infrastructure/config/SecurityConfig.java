@@ -53,12 +53,6 @@ public class SecurityConfig {
                         // Gestion de usuarios: solo ADMIN
                         .requestMatchers("/usuarios/**").hasRole("ADMIN")
 
-                        // Lecturas que el PROPIETARIO puede ver
-                        .requestMatchers(HttpMethod.GET, "/resultados/**")
-                            .hasAnyRole("PROPIETARIO", "ANALISTA", "ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/seguimientos/**")
-                            .hasAnyRole("PROPIETARIO", "ANALISTA", "ADMIN")
-
                         // Operacion del flujo: ANALISTA y ADMIN (incluye escritura de seguimientos)
                         .requestMatchers("/empresas/**", "/cuadro-de-obra/**", "/analisis/**",
                                 "/licitaciones/**", "/resultados/**", "/seguimientos/**")
