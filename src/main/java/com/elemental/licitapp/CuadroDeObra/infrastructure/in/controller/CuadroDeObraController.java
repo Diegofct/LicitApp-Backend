@@ -6,6 +6,7 @@ import com.elemental.licitapp.CuadroDeObra.application.ports.in.ExtraerPliegoUse
 import com.elemental.licitapp.CuadroDeObra.domain.entity.CuadroDeObra;
 import com.elemental.licitapp.CuadroDeObra.domain.entity.RequisitoLicitacion;
 import com.elemental.licitapp.CuadroDeObra.infrastructure.in.controller.dto.ActualizarEstadoRequestDTO;
+import com.elemental.licitapp.CuadroDeObra.infrastructure.in.controller.dto.ActualizarPresentacionRequestDTO;
 import com.elemental.licitapp.CuadroDeObra.infrastructure.in.controller.dto.CuadroDeObraRefDTO;
 import com.elemental.licitapp.CuadroDeObra.infrastructure.in.controller.dto.CuadroDeObraRequestDTO;
 import com.elemental.licitapp.CuadroDeObra.infrastructure.in.controller.dto.CuadroDeObraResponseDTO;
@@ -101,9 +102,10 @@ public class CuadroDeObraController {
     }
 
     /**
-     * Referencias (id + numeroProceso) de los cuadros ya guardados. El frontend las cruza
-     * contra las licitaciones de SECOP II para resaltar las filas ya agregadas y abrir el
-     * registro existente en modo solo lectura, evitando duplicados.
+     * Referencias (id + numeroProceso + idDelProceso) de los cuadros ya guardados. El
+     * frontend las cruza contra las licitaciones de SECOP II por {@code idDelProceso}
+     * para resaltar las filas ya agregadas y abrir el registro existente en modo solo
+     * lectura, evitando duplicados.
      */
     @GetMapping("/refs")
     public ResponseEntity<List<CuadroDeObraRefDTO>> getReferencias() {
@@ -136,6 +138,18 @@ public class CuadroDeObraController {
     public ResponseEntity<CuadroDeObraResponseDTO> updateEstado(@PathVariable Long id,
                                                                 @Valid @RequestBody ActualizarEstadoRequestDTO request) {
         var actualizado = cuadroDeObraUseCase.updateEstado(id, request.getCuadroDeObraEstado());
+        return ResponseEntity.ok(CuadroDeObraRequestMapper.toResponseDTO(actualizado));
+    }
+
+    /**
+     * Marca "nos presentamos" del cuadro (compartida por el equipo). El body admite
+     * presentacion null para limpiar la marca. No dispara seguimiento ni valida transición:
+     * es un marcador de triaje, independiente del estado formal del proceso.
+     */
+    @PatchMapping("/{id}/presentacion")
+    public ResponseEntity<CuadroDeObraResponseDTO> updatePresentacion(@PathVariable Long id,
+                                                                      @RequestBody ActualizarPresentacionRequestDTO request) {
+        var actualizado = cuadroDeObraUseCase.actualizarPresentacion(id, request.getPresentacion());
         return ResponseEntity.ok(CuadroDeObraRequestMapper.toResponseDTO(actualizado));
     }
 

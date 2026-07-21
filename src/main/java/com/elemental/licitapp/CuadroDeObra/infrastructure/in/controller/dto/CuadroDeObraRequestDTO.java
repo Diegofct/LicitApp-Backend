@@ -23,6 +23,13 @@ public class CuadroDeObraRequestDTO {
     @NotBlank(message = "numeroProceso es obligatorio")
     private String numeroProceso;
 
+    /**
+     * Identificador del proceso en SECOP II. Opcional: los cuadros cargados a mano no
+     * provienen de SECOP y se crean sin él. Cuando viene, es la llave que identifica el
+     * proceso y sobre la que se rechazan los duplicados.
+     */
+    private String idDelProceso;
+
     private String descripcionObjeto;
 
     private String estadoProceso;

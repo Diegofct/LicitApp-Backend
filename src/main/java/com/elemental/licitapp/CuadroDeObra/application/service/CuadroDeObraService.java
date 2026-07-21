@@ -10,6 +10,7 @@ import com.elemental.licitapp.CuadroDeObra.application.ports.out.RequisitoLicita
 import com.elemental.licitapp.CuadroDeObra.domain.entity.CuadroDeObra;
 import com.elemental.licitapp.CuadroDeObra.domain.entity.RequisitoLicitacion;
 import com.elemental.licitapp.CuadroDeObra.domain.enums.CuadroDeObraEstado;
+import com.elemental.licitapp.CuadroDeObra.domain.enums.PresentacionMarca;
 import com.elemental.licitapp.CuadroDeObra.domain.projection.CuadroDeObraRef;
 import com.elemental.licitapp.Exception.ProcesoYaRegistradoException;
 import com.elemental.licitapp.Exception.ResourceNotFoundException;
@@ -120,13 +121,17 @@ public class CuadroDeObraService implements CuadroDeObraUseCase, ConsultarRequis
     @Override
     @Transactional
     public CuadroDeObra createCuadro (CuadroDeObra nuevoCuadro){
-        // Evita agregar dos veces la misma licitación al Cuadro de Obra (cruce por numeroProceso).
-        // Si el cuadro se crea sin número de proceso, no aplica la restricción de unicidad.
-        String numeroProceso = nuevoCuadro.getNumeroProceso();
-        if (numeroProceso != null && !numeroProceso.isBlank()
-                && cuadroDeObraRepositoryPort.existePorNumeroProceso(numeroProceso)) {
+        // Evita agregar dos veces la misma licitación al Cuadro de Obra. El cruce va por
+        // idDelProceso y no por numeroProceso: este último se repite entre entidades, así
+        // que rechazaba procesos distintos que solo compartían el número.
+        // Los cuadros cargados a mano no vienen de SECOP y no traen idDelProceso: no
+        // aplica la restricción de unicidad.
+        String idDelProceso = nuevoCuadro.getIdDelProceso();
+        if (idDelProceso != null && !idDelProceso.isBlank()
+                && cuadroDeObraRepositoryPort.existePorIdDelProceso(idDelProceso)) {
+            // El mensaje usa el número de proceso: es lo que el analista reconoce.
             throw new ProcesoYaRegistradoException(
-                    "Ya existe un cuadro de obra para el proceso " + numeroProceso);
+                    "Ya existe un cuadro de obra para el proceso " + nuevoCuadro.getNumeroProceso());
         }
         nuevoCuadro.setCuadroDeObraEstado(CuadroDeObraEstado.POR_PRESENTAR);
         return cuadroDeObraRepositoryPort.save(nuevoCuadro);
@@ -138,6 +143,7 @@ public class CuadroDeObraService implements CuadroDeObraUseCase, ConsultarRequis
         CuadroDeObra cuadroExistente = findCuadroById(id);
 
         // fechaPublicacion es inmutable: una vez publicada por la entidad contratante en SECOP, no se modifica.
+        // idDelProceso tampoco se toca: es la identidad del cuadro frente a SECOP, no un dato editable.
         cuadroExistente.setEntidadContratante(cuadroConActualizaciones.getEntidadContratante());
         cuadroExistente.setNumeroProceso(cuadroConActualizaciones.getNumeroProceso());
         cuadroExistente.setDescripcionObjeto(cuadroConActualizaciones.getDescripcionObjeto());
@@ -195,6 +201,15 @@ public class CuadroDeObraService implements CuadroDeObraUseCase, ConsultarRequis
         }
         cuadro.setCuadroDeObraEstado(nuevoEstado);
         return nuevoEstado == CuadroDeObraEstado.PRESENTADO;
+    }
+
+    @Override
+    @Transactional
+    public CuadroDeObra actualizarPresentacion(Long id, PresentacionMarca marca) {
+        // marca == null limpia la marca (vuelve a "sin marca"): es un valor válido.
+        CuadroDeObra cuadro = findCuadroById(id);
+        cuadro.setPresentacion(marca);
+        return cuadroDeObraRepositoryPort.save(cuadro);
     }
 
     @Override

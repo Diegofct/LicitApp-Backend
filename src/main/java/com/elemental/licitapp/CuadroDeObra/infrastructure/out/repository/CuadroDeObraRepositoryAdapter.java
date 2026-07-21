@@ -55,8 +55,8 @@ public class CuadroDeObraRepositoryAdapter implements CuadroDeObraRepositoryPort
     }
 
     @Override
-    public boolean existePorNumeroProceso(String numeroProceso) {
-        return jpaRepository.existsByNumeroProceso(numeroProceso);
+    public boolean existePorIdDelProceso(String idDelProceso) {
+        return jpaRepository.existsByIdDelProceso(idDelProceso);
     }
 
     @Override

@@ -19,9 +19,9 @@ import java.util.List;
 
 /**
  * Lee el header Authorization: Bearer <token>, valida el JWT a traves del puerto
- * y, si es valido, puebla el SecurityContext con la autenticacion (correo +
- * authority ROLE_<rol>). No emite respuestas de error: si el token falta o es
- * invalido, deja la peticion sin autenticar y la cadena decide (401/403).
+ * y, si es valido, puebla el SecurityContext con la autenticacion (UsuarioAutenticado
+ * con id + correo, y authority ROLE_<rol>). No emite respuestas de error: si el token
+ * falta o es invalido, deja la peticion sin autenticar y la cadena decide (401/403).
  */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -50,8 +50,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private void autenticar(DatosToken datos, HttpServletRequest request) {
         var authority = new SimpleGrantedAuthority("ROLE_" + datos.rol());
+        var principal = new UsuarioAutenticado(datos.id(), datos.correo());
         var auth = new UsernamePasswordAuthenticationToken(
-                datos.correo(), null, List.of(authority));
+                principal, null, List.of(authority));
         auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(auth);
     }

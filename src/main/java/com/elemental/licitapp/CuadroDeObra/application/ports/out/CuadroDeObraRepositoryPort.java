@@ -17,7 +17,7 @@ public interface CuadroDeObraRepositoryPort {
     Page<CuadroDeObra> findByCuadroDeObraEstadoIn(List<CuadroDeObraEstado> estados, Pageable pageable);
     Map<CuadroDeObraEstado, Long> contarPorEstado();
     List<CuadroDeObraRef> obtenerReferencias();
-    boolean existePorNumeroProceso(String numeroProceso);
+    boolean existePorIdDelProceso(String idDelProceso);
     void delete(Long id);
 
 }

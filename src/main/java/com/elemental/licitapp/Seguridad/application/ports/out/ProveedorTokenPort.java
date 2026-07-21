@@ -19,6 +19,11 @@ public interface ProveedorTokenPort {
     /** Valida la firma/expiracion y extrae los datos del sujeto. Vacio si es invalido. */
     Optional<DatosToken> validar(String token);
 
-    /** Claims minimas que el filtro necesita para reconstruir la autenticacion. */
-    record DatosToken(String correo, String rol) {}
+    /**
+     * Claims minimas que el filtro necesita para reconstruir la autenticacion.
+     * El id viaja en el token para que la auditoria pueda resolver el autor sin
+     * consultar la BD (ver UsuarioAuditorAware). Es null en tokens emitidos antes
+     * de que se agregara el claim: en ese caso simplemente no se audita la autoria.
+     */
+    record DatosToken(Long id, String correo, String rol) {}
 }
