@@ -3,6 +3,7 @@ CLAUDE.md
 .claude
 .gitignore
 specs
+.dockerignore
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
