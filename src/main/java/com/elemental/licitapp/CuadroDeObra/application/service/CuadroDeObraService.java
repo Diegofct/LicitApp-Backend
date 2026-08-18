@@ -94,6 +94,12 @@ public class CuadroDeObraService implements CuadroDeObraUseCase, ConsultarRequis
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<CuadroDeObra> buscarPorId(Long id) {
+        return cuadroDeObraRepositoryPort.findById(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Page<CuadroDeObra> findCuadrosPorVistas(String vista, Pageable pageable){
         List<CuadroDeObraEstado> estados;
 
