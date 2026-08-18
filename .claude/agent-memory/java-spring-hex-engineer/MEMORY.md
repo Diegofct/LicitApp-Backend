@@ -7,3 +7,7 @@
 - [Módulo Resultados](modulo_resultados.md) — slice creado 2026-05-26; endpoints `/resultados/resumen` y `/resultados/historial`, tasa de éxito en porcentaje, sin tabla propia
 - [Convención decimal monetario](decimal_monetario_convencion.md) — COP=BigDecimal(20,2), ratios=(20,4); valorSMMLV y poeAnticipo quedan Double a propósito
 - [Refuerzos AnalisisDeCumplimiento](refuerzos_analisis_cumplimiento.md) — backlog jun-jul 2026 COMPLETADO; C1/C2/C3/C4/C5/C7 hechos, C6 cerrado sin cambios
+- [Ponderación económica: es MEDIANA](ponderacion_economica_mediana.md) — no corregir a Diego; los Documentos Tipo vigentes usan una mediana real, el Decreto 1082 una media
+- [Rol PROPIETARIO eliminado](rol_propietario_eliminado.md) — V19 lo migró a ANALISTA; CLAUDE.md está desactualizado, leer SecurityConfig
+- [Sobre 2: avisar, nunca bloquear](sobre2_momento_avisar_no_bloquear.md) — el momento del proceso genera advertencias, no errores; el uso histórico es alcance del módulo
+- [Verificar arranque en 8081](verificacion_arranque_puerto.md) — Diego ocupa el 8080 desde IntelliJ; compilar no basta cuando el riesgo es de arranque

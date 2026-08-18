@@ -53,9 +53,13 @@ public class SecurityConfig {
                         // Gestion de usuarios: solo ADMIN
                         .requestMatchers("/usuarios/**").hasRole("ADMIN")
 
-                        // Operacion del flujo: ANALISTA y ADMIN (incluye escritura de seguimientos)
+                        // Operacion del flujo: ANALISTA y ADMIN (incluye escritura de seguimientos).
+                        // /sobre-2/** entra aqui completo (lectura y escritura): decidir el valor
+                        // de la oferta economica es parte de la operacion del licitador, y la
+                        // importacion desde SECOP escribe en BD.
                         .requestMatchers("/empresas/**", "/cuadro-de-obra/**", "/analisis/**",
-                                "/licitaciones/**", "/resultados/**", "/seguimientos/**")
+                                "/licitaciones/**", "/resultados/**", "/seguimientos/**",
+                                "/sobre-2/**")
                             .hasAnyRole("ANALISTA", "ADMIN")
 
                         // Cualquier otra ruta exige autenticacion (ej. /auth/me)
