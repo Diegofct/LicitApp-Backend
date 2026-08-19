@@ -24,6 +24,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @Component
 public class SecopApiAdapter implements SecopApiPort {
@@ -33,6 +34,9 @@ public class SecopApiAdapter implements SecopApiPort {
     // Valor literal del dataset p6dx-8zbt (incluye la rareza ortográfica del proveedor).
     private static final String MODALIDAD_OBRA_PUBLICA = "Licitación pública Obra Publica";
     private static final String FECHA_FIELD = "fecha_de_publicacion_del";
+
+    /** Filas a pedir para resolver el portafolio: el proceso viene repetido por fase. */
+    private static final int FILAS_RESOLUCION_PORTAFOLIO = 10;
 
     private static final String SELECT_FIELDS = String.join(",",
             "id_del_proceso",
@@ -47,6 +51,10 @@ public class SecopApiAdapter implements SecopApiPort {
             "urlproceso",
             "codigo_principal_de_categoria",
             "referencia_del_proceso",
+            "fecha_de_recepcion_de",
+            "duracion",
+            "unidad_de_duracion",
+            "id_del_portafolio",
             FECHA_FIELD + " AS fecha_publicacion_consolidada");
 
     private final RestClient restClient;
@@ -132,6 +140,86 @@ public class SecopApiAdapter implements SecopApiPort {
         }
         log.info("✅ SECOP devolvió {} registros.", dtos.size());
         return dtos.stream().map(mapper::toEntity).toList();
+    }
+
+    /**
+     * p6dx devuelve el proceso repetido en varias filas (una por fase) y no todas traen el
+     * portafolio, así que se piden unas pocas y se toma la primera que lo tenga. La relación
+     * {@code id_del_proceso -> id_del_portafolio} es 1:1.
+     */
+    @Override
+    public Optional<String> resolverPortafolio(String idDelProceso) {
+        if (idDelProceso == null || idDelProceso.isBlank()) {
+            return Optional.empty();
+        }
+
+        String query = UriComponentsBuilder.newInstance()
+                .queryParam("$select", "id_del_portafolio")
+                .queryParam("$where", "id_del_proceso = '" + escapar(idDelProceso.trim()) + "'")
+                .queryParam("$limit", FILAS_RESOLUCION_PORTAFOLIO)
+                .build()
+                .getQuery();
+
+        List<SecopLicitacionDTO> filas;
+        try {
+            filas = restClient.get()
+                    .uri("?" + query)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<SecopLicitacionDTO>>() {});
+        } catch (Exception e) {
+            throw new SecopApiException(
+                    "No se pudo resolver el portafolio del proceso " + idDelProceso + " en SECOP.", e);
+        }
+
+        if (filas == null) {
+            return Optional.empty();
+        }
+        return filas.stream()
+                .map(SecopLicitacionDTO::getIdDelPortafolio)
+                .filter(portafolio -> portafolio != null && !portafolio.isBlank())
+                .findFirst();
+    }
+
+    /**
+     * La URL del proceso vive solo en la API: no se persiste en ninguna tabla. Se resuelve así
+     * cada vez que hace falta, lo que permite enlazar también procesos antiguos o ya cerrados.
+     */
+    @Override
+    public Optional<String> resolverUrlProceso(String idDelProceso) {
+        if (idDelProceso == null || idDelProceso.isBlank()) {
+            return Optional.empty();
+        }
+
+        String query = UriComponentsBuilder.newInstance()
+                .queryParam("$select", "urlproceso")
+                .queryParam("$where", "id_del_proceso = '" + escapar(idDelProceso.trim()) + "'")
+                .queryParam("$limit", FILAS_RESOLUCION_PORTAFOLIO)
+                .build()
+                .getQuery();
+
+        List<SecopLicitacionDTO> filas;
+        try {
+            filas = restClient.get()
+                    .uri("?" + query)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<SecopLicitacionDTO>>() {});
+        } catch (Exception e) {
+            throw new SecopApiException(
+                    "No se pudo resolver la URL del proceso " + idDelProceso + " en SECOP.", e);
+        }
+
+        if (filas == null) {
+            return Optional.empty();
+        }
+        return filas.stream()
+                .map(fila -> mapper.extractUrl(fila.getUrlProceso()))
+                .filter(url -> url != null && !url.isBlank())
+                .findFirst();
+    }
+
+    /** SoQL escapa la comilla simple duplicándola. */
+    private String escapar(String valor) {
+        return valor.replace("'", "''");
     }
 
     private long fetchCount(String whereClause) {

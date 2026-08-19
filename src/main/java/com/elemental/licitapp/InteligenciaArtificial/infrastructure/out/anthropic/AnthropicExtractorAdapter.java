@@ -9,7 +9,6 @@ import com.anthropic.models.messages.TextBlockParam;
 import com.elemental.licitapp.Exception.ProcesamientoPliegoException;
 import com.elemental.licitapp.InteligenciaArtificial.application.ports.out.ExtractorDocumentosPort;
 import com.elemental.licitapp.InteligenciaArtificial.domain.entity.DatosRupExtraidos;
-import com.elemental.licitapp.InteligenciaArtificial.domain.entity.RequisitosPliegoExtraidos;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
@@ -32,20 +31,17 @@ import java.util.stream.Collectors;
 public class AnthropicExtractorAdapter implements ExtractorDocumentosPort {
 
     private static final String RUTA_PROMPT = "prompts/extraccion-rup.txt";
-    private static final String RUTA_PROMPT_PLIEGO = "prompts/extraccion-pliego.txt";
 
     private final AnthropicClient client;
     private final AnthropicConfig config;
     private final ObjectMapper objectMapper;
     private final String instrucciones;
-    private final String instruccionesPliego;
 
     public AnthropicExtractorAdapter(AnthropicClient client, AnthropicConfig config, ObjectMapper objectMapper) {
         this.client = client;
         this.config = config;
         this.objectMapper = objectMapper;
         this.instrucciones = cargarPrompt(RUTA_PROMPT);
-        this.instruccionesPliego = cargarPrompt(RUTA_PROMPT_PLIEGO);
     }
 
     @Override
@@ -53,13 +49,6 @@ public class AnthropicExtractorAdapter implements ExtractorDocumentosPort {
         String json = invocarModelo(pdf, instrucciones,
                 "Extrae los datos del RUP adjunto y responde unicamente con el objeto JSON, sin texto adicional ni formato markdown.");
         return deserializar(json, DatosRupExtraidos.class);
-    }
-
-    @Override
-    public RequisitosPliegoExtraidos extraerRequisitosPliego(byte[] pdf) {
-        String json = invocarModelo(pdf, instruccionesPliego,
-                "Extrae los requisitos habilitantes del pliego adjunto y responde unicamente con el objeto JSON, sin texto adicional ni formato markdown.");
-        return deserializar(json, RequisitosPliegoExtraidos.class);
     }
 
     /**
