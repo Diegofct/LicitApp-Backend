@@ -1,7 +1,6 @@
 package com.elemental.licitapp.InteligenciaArtificial.application.ports.out;
 
 import com.elemental.licitapp.InteligenciaArtificial.domain.entity.DatosRupExtraidos;
-import com.elemental.licitapp.InteligenciaArtificial.domain.entity.RequisitosPliegoExtraidos;
 
 /**
  * Frontera con el proveedor LLM. El adaptador que lo implementa
@@ -16,12 +15,4 @@ public interface ExtractorDocumentosPort {
      * @throws com.elemental.licitapp.Exception.ProcesamientoPliegoException si el proveedor falla o hay timeout
      */
     DatosRupExtraidos extraerDatosRup(byte[] pdf);
-
-    /**
-     * Envia el PDF de un pliego al modelo y devuelve los requisitos habilitantes crudos
-     * (sin validar/normalizar).
-     *
-     * @throws com.elemental.licitapp.Exception.ProcesamientoPliegoException si el proveedor falla o hay timeout
-     */
-    RequisitosPliegoExtraidos extraerRequisitosPliego(byte[] pdf);
 }

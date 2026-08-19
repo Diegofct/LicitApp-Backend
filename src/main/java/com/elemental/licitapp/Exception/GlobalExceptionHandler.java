@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
@@ -76,6 +77,15 @@ public class GlobalExceptionHandler {
         error.put("field", fe.getField());
         error.put("message", fe.getDefaultMessage());
         return error;
+    }
+
+    /**
+     * Sin esta regla, un parámetro de consulta obligatorio que falta cae en el manejador
+     * genérico y se reporta como 500, culpando al servidor de un error del cliente.
+     */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingParam(MissingServletRequestParameterException ex) {
+        return build(HttpStatus.BAD_REQUEST, "Falta el parámetro obligatorio '" + ex.getParameterName() + "'.");
     }
 
     @ExceptionHandler(Exception.class)

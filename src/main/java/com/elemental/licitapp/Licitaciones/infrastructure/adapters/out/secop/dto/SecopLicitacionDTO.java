@@ -52,4 +52,17 @@ public class SecopLicitacionDTO {
     @JsonProperty("codigo_principal_de_categoria")
     private String codigoUnpspc;
 
+    @JsonProperty("fecha_de_recepcion_de")
+    private LocalDateTime fechaRecepcionOfertas;
+
+    /** SECOP la entrega como texto y a veces vale "0"; se normaliza en el mapper. */
+    @JsonProperty("duracion")
+    private String duracion;
+
+    @JsonProperty("unidad_de_duracion")
+    private String unidadDuracion;
+
+    @JsonProperty("id_del_portafolio")
+    private String idDelPortafolio;
+
 }
