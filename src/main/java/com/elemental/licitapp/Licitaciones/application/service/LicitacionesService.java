@@ -3,6 +3,8 @@ package com.elemental.licitapp.Licitaciones.application.service;
 import com.elemental.licitapp.Licitaciones.application.ports.out.DocumentosSecopPort;
 import com.elemental.licitapp.Licitaciones.application.ports.out.SecopApiPort;
 import com.elemental.licitapp.Licitaciones.domain.entity.DocumentoProceso;
+import com.elemental.licitapp.Licitaciones.domain.entity.EstadoProceso;
+import com.elemental.licitapp.Licitaciones.domain.entity.FiltroLicitaciones;
 import com.elemental.licitapp.Licitaciones.domain.entity.Licitacion;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -37,8 +39,14 @@ public class LicitacionesService {
         this.documentosSecopPort = documentosSecopPort;
     }
 
-    public Page<Licitacion> obtenerLicitacionesObraPublica(Pageable pageable, String entidad) {
-        return secopApiPort.obtenerLicitacionesObraPublica(pageable, entidad);
+    public Page<Licitacion> obtenerLicitacionesObraPublica(Pageable pageable,
+                                                           FiltroLicitaciones filtro) {
+        return secopApiPort.obtenerLicitacionesObraPublica(pageable, filtro);
+    }
+
+    /** Departamentos con procesos, para el desplegable de filtro de la Búsqueda SECOP. */
+    public List<String> obtenerDepartamentos() {
+        return secopApiPort.obtenerDepartamentos();
     }
 
     /**
@@ -82,14 +90,15 @@ public class LicitacionesService {
     }
 
     /**
-     * URL del proceso en SECOP II. Se resuelve contra la API porque no se guarda en base de
-     * datos; así el enlace funciona igual para procesos antiguos ya cerrados.
+     * Fase y desenlace del proceso en SECOP II, incluida su URL. Se resuelve contra la API
+     * porque nada de esto se guarda en base de datos; así funciona igual para los procesos
+     * antiguos, que solo tienen guardado su identificador.
      */
-    public Optional<String> obtenerUrlDelProceso(String idDelProceso) {
+    public Optional<EstadoProceso> obtenerEstadoDelProceso(String idDelProceso) {
         if (idDelProceso == null || idDelProceso.isBlank()) {
             return Optional.empty();
         }
-        return secopApiPort.resolverUrlProceso(idDelProceso);
+        return secopApiPort.resolverEstadoProceso(idDelProceso);
     }
 
     private boolean pareceMatrizDeIndicadores(DocumentoProceso documento) {

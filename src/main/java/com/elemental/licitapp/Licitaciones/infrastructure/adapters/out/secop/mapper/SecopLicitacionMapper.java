@@ -31,6 +31,7 @@ public class SecopLicitacionMapper {
         licitacion.setFechaCierre(dto.getFechaRecepcionOfertas());
         licitacion.setPlazoMeses(normalizarPlazoMeses(dto.getDuracion(), dto.getUnidadDuracion()));
         licitacion.setIdDelPortafolio(dto.getIdDelPortafolio());
+        licitacion.setFase(dto.getFase());
         return licitacion;
     }
 

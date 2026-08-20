@@ -218,6 +218,17 @@ public class CuadroDeObraService implements CuadroDeObraUseCase, ConsultarRequis
         return cuadroDeObraRepositoryPort.save(cuadro);
     }
 
+    /**
+     * Borra el cuadro y todo lo que cuelga de él.
+     *
+     * <p>Aquí solo se borran los requisitos: la conformación, el seguimiento (con sus eventos)
+     * y los oferentes importados se van solos por {@code ON DELETE CASCADE}, puesto en V27. Se
+     * resolvió en la base y no aquí para no abrir puertos de escritura de este slice hacia
+     * SeguimientoProceso, AnalisisDeCumplimiento y Sobre2; los requisitos son la excepción
+     * porque su FK la generó Hibernate con un nombre distinto en cada entorno.
+     *
+     * <p>Ojo: borrar un cuadro ya presentado se lleva por delante su historial de seguimiento.
+     */
     @Override
     @Transactional
     public void deleteCuadro(Long id){
