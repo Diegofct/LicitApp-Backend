@@ -18,6 +18,7 @@ public final class SeguimientoRequestMapper {
                 .tipo(dto.getTipo())
                 .fechaEvento(dto.getFechaEvento())
                 .descripcion(dto.getDescripcion())
+                .observaciones(dto.getObservaciones())
                 .build();
     }
 
@@ -41,6 +42,7 @@ public final class SeguimientoRequestMapper {
                 .tipo(e.getTipo())
                 .fechaEvento(e.getFechaEvento())
                 .descripcion(e.getDescripcion())
+                .observaciones(e.getObservaciones())
                 .fechaRegistro(e.getFechaRegistro())
                 .build();
     }

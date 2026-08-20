@@ -20,4 +20,7 @@ public class RegistrarEventoRequestDTO {
     private LocalDateTime fechaEvento;
 
     private String descripcion;
+
+    /** Opcional. El modal de registro ya lo enviaba; antes se descartaba en silencio. */
+    private String observaciones;
 }

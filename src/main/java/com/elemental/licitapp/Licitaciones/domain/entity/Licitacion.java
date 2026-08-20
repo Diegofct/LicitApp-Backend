@@ -41,4 +41,10 @@ public class Licitacion {
      * documentos del proceso y las ofertas, no el {@code idDelProceso}.
      */
     private String idDelPortafolio;
+
+    /**
+     * Evento en el que va el proceso segun SECOP ("Fase de ofertas", "Presentacion de
+     * observaciones"). Viene con el listado para no tener que consultarlo fila por fila.
+     */
+    private String fase;
 }

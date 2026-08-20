@@ -2,8 +2,9 @@ package com.elemental.licitapp.Licitaciones.infrastructure.adapters.in.controlle
 
 import com.elemental.licitapp.Licitaciones.application.service.LicitacionesService;
 import com.elemental.licitapp.Licitaciones.domain.entity.DocumentoProceso;
+import com.elemental.licitapp.Licitaciones.domain.entity.EstadoProceso;
+import com.elemental.licitapp.Licitaciones.domain.entity.FiltroLicitaciones;
 import com.elemental.licitapp.Licitaciones.domain.entity.Licitacion;
-import com.elemental.licitapp.Licitaciones.infrastructure.adapters.in.controller.dto.UrlProcesoResponseDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -27,15 +29,38 @@ public class LicitacionesController {
         this.licitacionesService = service;
     }
 
+    /**
+     * Listado de obra pública. Todos los filtros son opcionales y se aplican en la propia API
+     * de SECOP, no en memoria: sin ninguno el resultado es el mismo de siempre.
+     *
+     * <p>El presupuesto se recibe <b>en pesos</b> y no en SMMLV, para no duplicar aquí el valor
+     * del salario mínimo que el frontend ya conoce.
+     */
     @GetMapping("/obra-publica")
     public ResponseEntity<Page<Licitacion>> obtenerLicitacionesObraPublica(
             @PageableDefault(size = 10) Pageable pageable,
-            @RequestParam(required = false) String entidad) {
+            @RequestParam(required = false) String entidad,
+            @RequestParam(required = false) String departamento,
+            @RequestParam(required = false) BigDecimal presupuestoMin,
+            @RequestParam(required = false) BigDecimal presupuestoMax,
+            @RequestParam(defaultValue = "false") boolean soloVigentes,
+            @RequestParam(defaultValue = "PUBLICACION") FiltroLicitaciones.OrdenLicitaciones orden) {
         if (pageable.getPageSize() > MAX_PAGE_SIZE) {
             throw new IllegalArgumentException(
                     "El tamaño de página no puede exceder " + MAX_PAGE_SIZE + " (límite de la API SECOP).");
         }
-        return ResponseEntity.ok(licitacionesService.obtenerLicitacionesObraPublica(pageable, entidad));
+        FiltroLicitaciones filtro = new FiltroLicitaciones(
+                entidad, departamento, presupuestoMin, presupuestoMax, soloVigentes, orden);
+        return ResponseEntity.ok(licitacionesService.obtenerLicitacionesObraPublica(pageable, filtro));
+    }
+
+    /**
+     * Departamentos con procesos, para el desplegable de filtro. Se devuelven tal como los
+     * escribe SECOP, que es lo que hace que el valor elegido vuelva a emparejar.
+     */
+    @GetMapping("/departamentos")
+    public ResponseEntity<List<String>> obtenerDepartamentos() {
+        return ResponseEntity.ok(licitacionesService.obtenerDepartamentos());
     }
 
     /**
@@ -62,13 +87,16 @@ public class LicitacionesController {
     }
 
     /**
-     * Enlace al proceso en SECOP II, para poder abrirlo desde el seguimiento y ver en qué
-     * evento va. Responde 200 aunque SECOP no publique la URL: en ese caso llega en {@code null}.
+     * Fase y desenlace del proceso en SECOP II: en qué evento va, si ya se adjudicó, a quién,
+     * por cuánto y contra cuántos oferentes. Incluye la URL del proceso, así que el seguimiento
+     * resuelve el enlace y el estado en una sola llamada.
+     *
+     * <p>Responde 200 con cuerpo vacío cuando SECOP no conoce el identificador: que un proceso
+     * no esté en el dataset no es un error, y así el frontend solo oculta el bloque.
      */
-    @GetMapping("/url-proceso")
-    public ResponseEntity<UrlProcesoResponseDTO> obtenerUrlDelProceso(
+    @GetMapping("/estado-proceso")
+    public ResponseEntity<EstadoProceso> obtenerEstadoDelProceso(
             @RequestParam String idDelProceso) {
-        String url = licitacionesService.obtenerUrlDelProceso(idDelProceso).orElse(null);
-        return ResponseEntity.ok(new UrlProcesoResponseDTO(idDelProceso, url));
+        return ResponseEntity.ok(licitacionesService.obtenerEstadoDelProceso(idDelProceso).orElse(null));
     }
 }

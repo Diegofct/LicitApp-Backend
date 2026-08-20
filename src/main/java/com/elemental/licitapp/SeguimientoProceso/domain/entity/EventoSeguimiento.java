@@ -34,6 +34,11 @@ public class EventoSeguimiento {
     @Column(name = "descripcion", columnDefinition = "TEXT")
     private String descripcion;
 
+    /** Notas libres del analista sobre el evento; separadas del "qué pasó" de la descripción. */
+    @Lob
+    @Column(name = "observaciones", columnDefinition = "TEXT")
+    private String observaciones;
+
     @Column(name = "fecha_registro", nullable = false)
     private LocalDateTime fechaRegistro;
 }

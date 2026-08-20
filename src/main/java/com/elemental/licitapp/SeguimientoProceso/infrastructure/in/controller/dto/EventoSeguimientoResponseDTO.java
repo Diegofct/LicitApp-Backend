@@ -17,5 +17,6 @@ public class EventoSeguimientoResponseDTO {
     private TipoEventoSeguimiento tipo;
     private LocalDateTime fechaEvento;
     private String descripcion;
+    private String observaciones;
     private LocalDateTime fechaRegistro;
 }

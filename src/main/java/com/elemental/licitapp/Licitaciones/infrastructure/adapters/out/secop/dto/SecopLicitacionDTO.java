@@ -65,4 +65,35 @@ public class SecopLicitacionDTO {
     @JsonProperty("id_del_portafolio")
     private String idDelPortafolio;
 
+    // --- Fase y desenlace del proceso (endpoint /estado-proceso) ---
+
+    @JsonProperty("fase")
+    private String fase;
+
+    @JsonProperty("estado_resumen")
+    private String estadoResumen;
+
+    /** SECOP lo entrega como "Si"/"No", no como booleano. */
+    @JsonProperty("adjudicado")
+    private String adjudicado;
+
+    /** Cuántos proponentes se presentaron. Vale 0 mientras la recepción sigue abierta. */
+    @JsonProperty("respuestas_al_procedimiento")
+    private Integer respuestasAlProcedimiento;
+
+    @JsonProperty("numero_de_lotes")
+    private Integer numeroDeLotes;
+
+    @JsonProperty("fecha_de_ultima_publicaci")
+    private LocalDateTime fechaUltimaPublicacion;
+
+    @JsonProperty("nombre_del_proveedor")
+    private String nombreDelProveedor;
+
+    @JsonProperty("valor_total_adjudicacion")
+    private BigDecimal valorTotalAdjudicacion;
+
+    @JsonProperty("fecha_adjudicacion")
+    private LocalDateTime fechaAdjudicacion;
+
 }
