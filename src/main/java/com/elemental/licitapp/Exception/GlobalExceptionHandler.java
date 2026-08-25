@@ -9,7 +9,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -97,6 +99,24 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
         return build(HttpStatus.BAD_REQUEST,
                 "El valor '" + ex.getValue() + "' no es válido para el parámetro '" + ex.getName() + "'.");
+    }
+
+    /**
+     * Ruta inexistente. Es el tercer caso del mismo patrón: el manejador genérico de abajo se
+     * traga excepciones que ya traen su propio código de estado y las reporta como 500, con lo
+     * que una URL mal escrita del cliente parece una caída del servidor.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleRutaNoEncontrada(NoResourceFoundException ex) {
+        return build(HttpStatus.NOT_FOUND, "No existe el recurso '" + ex.getResourcePath() + "'.");
+    }
+
+    /** La ruta existe pero no acepta ese verbo (un POST donde solo hay GET, por ejemplo). */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleMetodoNoSoportado(
+            HttpRequestMethodNotSupportedException ex) {
+        return build(HttpStatus.METHOD_NOT_ALLOWED,
+                "El método " + ex.getMethod() + " no está permitido en esta ruta.");
     }
 
     @ExceptionHandler(Exception.class)
