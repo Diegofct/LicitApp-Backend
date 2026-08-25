@@ -33,8 +33,10 @@ RUN apk add --no-cache freetype fontconfig
 # Usuario no-root por seguridad: el proceso Java no corre como root.
 RUN addgroup -S app && adduser -S app -G app
 
-# Copiamos el jar empaquetado (nombre = artifactId-version del pom.xml).
-COPY --from=build /app/target/licitapp-0.0.1-SNAPSHOT.jar app.jar
+# Copiamos el jar empaquetado. Por comodin y no por nombre fijo: asi subir la version
+# en el pom.xml no obliga a tocar el Dockerfile. En target solo queda un .jar porque
+# el build parte de un "clean" y el jar original de Spring Boot se renombra a .original.
+COPY --from=build /app/target/*.jar app.jar
 
 USER app
 

@@ -1,0 +1,36 @@
+# Artefactos de build: se regeneran dentro de la imagen (mvn package).
+target
+
+# SECRETOS: nunca deben entrar en la imagen (defensa en profundidad; el
+# Dockerfile además solo copia pom.xml y src/).
+.env
+.env.*
+
+# Control de versiones y metadatos.
+.git
+.gitignore
+.gitattributes
+.github
+
+# Maven wrapper: no se usa (el build usa la imagen 'maven').
+.mvn
+mvnw
+mvnw.cmd
+
+# IDE / editor.
+.idea
+*.iml
+.vscode
+.settings
+.classpath
+.project
+
+# Documentación y specs: no afectan al empaquetado.
+specs
+.claude
+CLAUDE.md
+HELP.md
+
+# Docker (innecesario dentro del contexto de build).
+Dockerfile
+.dockerignore
